@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+.next/
+out/
+
+# testing
+coverage/
+
+# env
+.env
+.env.*.local
+!.env.example
+
+# logs
+npm-debug.log*
+*.log
+
+# typescript
+*.tsbuildinfo
+
+# OS/editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# AWS CDK
+infra/cdk.out/
+infra/cdk.context.json
+
+# Playwright
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+e2e/playwright/.cache/
