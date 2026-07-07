@@ -32,6 +32,10 @@ npm-debug.log*
 infra/cdk.out/
 infra/cdk.context.json
 
+# Claude Code local state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
 # Playwright
 e2e/test-results/
 e2e/playwright-report/
