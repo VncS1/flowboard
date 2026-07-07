@@ -19,5 +19,8 @@
     "format:check": "prettier --check .",
     "build": "npm run build --workspaces --if-present",
     "prepare": "husky"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
