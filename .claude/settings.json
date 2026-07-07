@@ -15,5 +15,9 @@
       "Bash(docker compose config:*)"
     ],
     "additionalDirectories": ["C:\\Users\\vinic\\Downloads\\flowboard"]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }
