@@ -21,6 +21,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^9.1.2",
+    "prettier": "^3.9.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.63.0"
   }
 }
