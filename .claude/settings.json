@@ -5,7 +5,14 @@
       "Bash(npm:*)",
       "Bash(git status:*)",
       "Bash(git log:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(git checkout:*)",
+      "Bash(chmod:*)",
+      "Bash(npx:*)",
+      "Bash(docker compose config:*)"
     ],
     "additionalDirectories": ["C:\\Users\\vinic\\Downloads\\flowboard"]
   }
