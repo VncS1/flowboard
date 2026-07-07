@@ -1,6 +1,6 @@
 # Flowboard Phase 0 — Repo & Monorepo Bootstrap Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** You are authorized to execute tasks directly from this document phase-by-phase. When a phase is started, break down its requirements into immediate actionable checkboxes directly within the current chat session. Do not generate separate markdown files for planning.
 
 **Goal:** Turn the empty `flowboard/` directory into a working npm-workspaces monorepo
 skeleton — git initialized, root TS/lint/format config in place, Postgres available via

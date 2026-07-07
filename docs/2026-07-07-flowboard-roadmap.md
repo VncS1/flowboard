@@ -1,3 +1,7 @@
+## Status
+- [x] Phase 0 — Repo & Monorepo Bootstrap (done, commit abc1234)
+- [ ] Phase 1 — packages/shared
+
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
 > plan. The project spans multiple independent subsystems (monorepo scaffold, DB, REST

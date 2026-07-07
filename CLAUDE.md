@@ -122,9 +122,7 @@ priority over implementation skills:
   This matters especially for anything touching the optimistic-concurrency logic on card
   moves (the `version`-column `UPDATE`) — that's exactly the kind of concurrency bug
   that's easy to introduce and hard to catch without a test written first.
-- **Multi-step work** → `skill/writing-plans` to produce the plan, then
-  `skill/executing-plans` (or `skill/subagent-driven-development` for independent tasks)
-  to carry it out.
+- **Multi-step work** → Execute directly using the phases defined in `2026-07-07-flowboard-roadmap.md`. Instead of creating new planning files, list the immediate sub-tasks as a brief text list in the chat context before starting to code.
 - **Before claiming anything is done/fixed/passing** → `skill/verification-before-completion`
   requires running and showing the test output first — for this project that means both
   `npm test` (unit/component) and the Playwright E2E suite, since a real-time bug can look
