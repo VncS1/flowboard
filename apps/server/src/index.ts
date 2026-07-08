@@ -2,7 +2,7 @@ import { config } from "dotenv";
 
 config({ quiet: true });
 
-import { buildApp } from "./app.js";
+const { buildApp } = await import("./app.js");
 
 const app = buildApp();
 const port = Number(process.env["PORT"] ?? 4000);
