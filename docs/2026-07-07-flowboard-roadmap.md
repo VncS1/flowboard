@@ -3,7 +3,7 @@
 - [x] Phase 1 — packages/shared (done, commit <hash-real>)
 - [x] Phase 2 — Database schema & migrations (done, commit <hash-real>)
 - [x] Phase 3 — Backend REST API (done, commit 419d8d4)
-- [ ] Phase 4 — WebSocket layer + optimistic concurrency (implementation + full gate complete, pending commit)
+- [x] Phase 4 — WebSocket layer + optimistic concurrency (done, commit e7751b1)
   - [x] 4.1 Failing integration test for concurrent card moves (RED confirmed, then GREEN)
   - [x] 4.2 ws server in-memory boardId → sockets map (`src/realtime/ws.ts`, `@fastify/websocket`)
   - [x] 4.3 JWT verification on socket handshake (same httpOnly cookie as REST, via `app.authenticate` preHandler)
