@@ -1,0 +1,182 @@
+import { describe, expect, it } from "vitest";
+
+import { buildApp } from "../app.js";
+
+async function signup(app: ReturnType<typeof buildApp>, email: string) {
+  const response = await app.inject({
+    method: "POST",
+    url: "/auth/signup",
+    payload: { email, name: "Test User", password: "correct-horse" },
+  });
+  const token = response.cookies.find((cookie) => cookie.name === "token")!.value;
+  return { token, userId: response.json().user.id as string };
+}
+
+async function createBoard(app: ReturnType<typeof buildApp>, token: string, name: string) {
+  const response = await app.inject({
+    method: "POST",
+    url: "/boards",
+    cookies: { token },
+    payload: { name },
+  });
+  return response.json().board as {
+    id: string;
+    columns: { id: string; name: string }[];
+  };
+}
+
+describe("POST /boards/:boardId/columns/:columnId/cards", () => {
+  it("requires authentication", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner1@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/columns/${board.columns[0]!.id}/cards`,
+      payload: { title: "First card" },
+    });
+
+    expect(response.statusCode).toBe(401);
+
+    await app.close();
+  });
+
+  it("creates a card at the end of the column", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner2@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const columnId = board.columns[0]!.id;
+
+    const first = await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/columns/${columnId}/cards`,
+      cookies: { token: owner.token },
+      payload: { title: "First card" },
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/columns/${columnId}/cards`,
+      cookies: { token: owner.token },
+      payload: { title: "Second card" },
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(first.json().card).toMatchObject({ title: "First card", position: 0, version: 1 });
+    expect(second.statusCode).toBe(201);
+    expect(second.json().card).toMatchObject({ title: "Second card", position: 1 });
+
+    await app.close();
+  });
+
+  it("returns 404 for a board owned by someone else", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner3@example.com");
+    const stranger = await signup(app, "cardstranger1@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/columns/${board.columns[0]!.id}/cards`,
+      cookies: { token: stranger.token },
+      payload: { title: "Sneaky card" },
+    });
+
+    expect(response.statusCode).toBe(404);
+
+    await app.close();
+  });
+});
+
+async function createCard(
+  app: ReturnType<typeof buildApp>,
+  token: string,
+  boardId: string,
+  columnId: string,
+  title: string,
+) {
+  const response = await app.inject({
+    method: "POST",
+    url: `/boards/${boardId}/columns/${columnId}/cards`,
+    cookies: { token },
+    payload: { title },
+  });
+  return response.json().card as { id: string; title: string };
+}
+
+describe("PATCH /cards/:id", () => {
+  it("renames the card for the board owner", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner4@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const card = await createCard(app, owner.token, board.id, board.columns[0]!.id, "Old title");
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/cards/${card.id}`,
+      cookies: { token: owner.token },
+      payload: { title: "New title" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().card).toMatchObject({ title: "New title" });
+
+    await app.close();
+  });
+
+  it("returns 404 when renaming a card on someone else's board", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner5@example.com");
+    const stranger = await signup(app, "cardstranger2@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const card = await createCard(app, owner.token, board.id, board.columns[0]!.id, "Old title");
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/cards/${card.id}`,
+      cookies: { token: stranger.token },
+      payload: { title: "Hijacked" },
+    });
+
+    expect(response.statusCode).toBe(404);
+
+    await app.close();
+  });
+});
+
+describe("DELETE /cards/:id", () => {
+  it("deletes the card for the board owner", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner6@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const card = await createCard(app, owner.token, board.id, board.columns[0]!.id, "Doomed");
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: `/cards/${card.id}`,
+      cookies: { token: owner.token },
+    });
+
+    expect(response.statusCode).toBe(204);
+
+    await app.close();
+  });
+
+  it("returns 404 when deleting a card on someone else's board", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner7@example.com");
+    const stranger = await signup(app, "cardstranger3@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const card = await createCard(app, owner.token, board.id, board.columns[0]!.id, "Safe");
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: `/cards/${card.id}`,
+      cookies: { token: stranger.token },
+    });
+
+    expect(response.statusCode).toBe(404);
+
+    await app.close();
+  });
+});

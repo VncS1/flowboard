@@ -2,6 +2,7 @@
 - [x] Phase 0 — Repo & Monorepo Bootstrap (done, commit abc1234)
 - [x] Phase 1 — packages/shared (done, commit <hash-real>)
 - [x] Phase 2 — Database schema & migrations (done, commit <hash-real>)
+- [x] Phase 3 — Backend REST API (done, commit <hash-real>)
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
@@ -15,13 +16,13 @@
 **Goal:** Build Flowboard — a real-time collaborative kanban board — from an empty
 directory to a deployed, tested MVP on AWS, per `CLAUDE.md`.
 
-**Architecture:** Next.js (App Router) frontend talks to a Node.js (Express/Fastify)
+**Architecture:** Next.js (App Router) frontend talks to a Node.js (Fastify)
 backend over REST (CRUD) and a persistent WebSocket (card/board live state). Postgres
 via RDS/Prisma is the source of truth; concurrent card moves are protected with
 optimistic locking on a `version` column. `packages/shared` pins the WS message contract
 (TS types + Zod) so frontend/backend can't silently drift.
 
-**Tech Stack:** Next.js, TypeScript (strict), Tailwind v4, Node.js + Express/Fastify,
+**Tech Stack:** Next.js, TypeScript (strict), Tailwind v4, Node.js + Fastify,
 ws/Socket.io, PostgreSQL (RDS) + Prisma, AWS CDK, Vitest + Testing Library, Playwright.
 
 **Auth:** JWT issued on login, stored in an httpOnly, Secure, SameSite=Lax cookie
@@ -100,7 +101,7 @@ Turn the empty directory into a working npm-workspaces monorepo skeleton.
 
 ## Phase 3 — Backend REST API (non-realtime CRUD)
 
-- Express/Fastify app scaffold + health check
+- Fastify app scaffold + health check
 - Auth: signup/login routes (see Open Decision #1), bcrypt hashing, JWT issuance
 - Board CRUD routes + integration tests
 - Card CRUD routes (create/rename/delete — not move) + integration tests

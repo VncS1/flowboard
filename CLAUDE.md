@@ -12,7 +12,7 @@ same card at once), and disciplined automated testing on both front-end and back
 ## Tech stack
 
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS v4
-- **Backend:** Node.js (Express or Fastify) with a `ws`/Socket.io WebSocket server,
+- **Backend:** Node.js (Fastify) with a `ws`/Socket.io WebSocket server,
   deployed on AWS EC2 (or Elastic Beanstalk on top of EC2)
 - **Database:** PostgreSQL via Amazon RDS, accessed through Prisma (schema, migrations,
   generated types)
@@ -22,7 +22,7 @@ same card at once), and disciplined automated testing on both front-end and back
   EC2/Elastic Beanstalk environment and the RDS instance
 - **Testing:**
   - Frontend: Vitest + Testing Library (unit/component), Playwright (E2E)
-  - Backend: integration tests against the Express/Fastify routes + a real Postgres
+  - Backend: integration tests against the Fastify routes + a real Postgres
     instance (Docker locally, RDS in CI)
   - Real-time-specific: Playwright tests using **two simultaneous browser contexts** to
     verify that an action from "user A" propagates live to "user B" without a refresh
@@ -38,7 +38,7 @@ Open Decision #2 (frontend hosting).
 ```
 Browser (persistent WebSocket connection)
   ↕
-Node.js server — Express/Fastify + ws/Socket.io (running on EC2)
+Node.js server — Fastify + ws/Socket.io (running on EC2)
   ↕
 PostgreSQL (Amazon RDS), via Prisma
 ```
@@ -50,7 +50,7 @@ PostgreSQL (Amazon RDS), via Prisma
   separate connection-tracking table needed (unlike the API Gateway WebSocket model)
   because the server itself owns the sockets.
 - Non-real-time operations (auth, board CRUD, user management) can go through the same
-  Express/Fastify app as regular REST routes — only card/board state changes need to go
+  Fastify app as regular REST routes — only card/board state changes need to go
   over the WebSocket path.
 - **Known next-level limitation (fine for a single-instance MVP, worth knowing):** if this
   ever runs as more than one server instance behind a load balancer, broadcasts need a
@@ -70,7 +70,7 @@ flowboard/
 ├── skill/
 ├── apps/
 │   ├── web/                  # Next.js frontend (App Router, Tailwind v4)
-│   └── server/                # Node.js backend: Express/Fastify + ws/Socket.io,
+│   └── server/                # Node.js backend: Fastify + ws/Socket.io,
 │                               # Prisma schema + migrations live here
 ├── infra/
 │   ├── bin/                   # CDK entrypoint
@@ -101,7 +101,7 @@ format fails the build on both sides immediately instead of surfacing as a live 
 
 - Run PostgreSQL locally via Docker (`docker compose up db`) — no need to touch real AWS
   for day-to-day development.
-- Run `apps/server` directly with `npm run dev` (Express/Fastify + WebSocket server on a
+- Run `apps/server` directly with `npm run dev` (Fastify + WebSocket server on a
   local port); `apps/web` points at it via an env var (`NEXT_PUBLIC_WS_URL`,
   `NEXT_PUBLIC_API_URL`).
 - Deploy via `cdk deploy` from `/infra` when testing against real AWS infrastructure
