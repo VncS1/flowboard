@@ -2,7 +2,7 @@
 - [x] Phase 0 — Repo & Monorepo Bootstrap (done, commit abc1234)
 - [x] Phase 1 — packages/shared (done, commit <hash-real>)
 - [x] Phase 2 — Database schema & migrations (done, commit <hash-real>)
-- [x] Phase 3 — Backend REST API (done, commit <hash-real>)
+- [x] Phase 3 — Backend REST API (done, commit 419d8d4)
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
