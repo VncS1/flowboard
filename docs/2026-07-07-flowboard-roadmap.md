@@ -3,6 +3,13 @@
 - [x] Phase 1 — packages/shared (done, commit <hash-real>)
 - [x] Phase 2 — Database schema & migrations (done, commit <hash-real>)
 - [x] Phase 3 — Backend REST API (done, commit 419d8d4)
+- [ ] Phase 4 — WebSocket layer + optimistic concurrency (implementation + full gate complete, pending commit)
+  - [x] 4.1 Failing integration test for concurrent card moves (RED confirmed, then GREEN)
+  - [x] 4.2 ws server in-memory boardId → sockets map (`src/realtime/ws.ts`, `@fastify/websocket`)
+  - [x] 4.3 JWT verification on socket handshake (same httpOnly cookie as REST, via `app.authenticate` preHandler)
+  - [x] 4.4 moveCard optimistic-concurrency handler (UPDATE ... WHERE version=$2)
+  - [x] 4.5 Broadcast successful move to other subscribed sockets (`board:sync`, sender excluded)
+  - [x] 4.6 Conflict response contract (`card:conflict`, reason `stale-version`, carries authoritative card)
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution

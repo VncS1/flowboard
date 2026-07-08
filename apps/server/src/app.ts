@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 
 import { authPlugin } from "./plugins/auth.js";
+import { realtimeRoutes } from "./realtime/ws.js";
 import { authRoutes } from "./routes/auth.js";
 import { boardRoutes } from "./routes/boards.js";
 import { cardRoutes } from "./routes/cards.js";
@@ -16,6 +17,7 @@ export function buildApp() {
   app.register(authRoutes);
   app.register(boardRoutes);
   app.register(cardRoutes);
+  app.register(realtimeRoutes);
 
   return app;
 }
