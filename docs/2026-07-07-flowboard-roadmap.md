@@ -1,6 +1,7 @@
 ## Status
 - [x] Phase 0 — Repo & Monorepo Bootstrap (done, commit abc1234)
-- [x] Phase 1 — packages/shared (done)
+- [x] Phase 1 — packages/shared (done, commit <hash-real>)
+- [x] Phase 2 — Database schema & migrations (done, commit <hash-real>)
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution

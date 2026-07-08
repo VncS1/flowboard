@@ -6,6 +6,7 @@ coverage
 playwright-report
 test-results
 package-lock.json
+apps/server/src/generated
 
 CLAUDE.md
 docs/
