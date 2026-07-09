@@ -1,5 +1,15 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
-afterEach(() => cleanup());
+import { FakeWebSocket } from "@/lib/testUtils/fakeWebSocket";
+
+beforeEach(() => {
+  FakeWebSocket.reset();
+  vi.stubGlobal("WebSocket", FakeWebSocket);
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
