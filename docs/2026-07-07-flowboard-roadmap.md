@@ -56,6 +56,31 @@
     correct `Access-Control-Allow-Origin`/`-Credentials` headers; `/boards` without the
     cookie 307-redirects to `/login`; `/boards` with the cookie renders; login/logout and
     the `/login`, `/signup` pages all confirmed live
+- [x] Phase 8 — E2E & multi-user real-time tests (Playwright) (done, commit 8507dcb)
+  - [x] 8.0 Added board/card creation UI (`CreateBoardForm`, a per-column new-card form in
+    `BoardDetail`) — Phases 5/6 only covered read/drag-and-drop, so the golden path had
+    nothing to drive through the browser; built test-first before the E2E specs
+  - [x] 8.1 `e2e/playwright.config.ts`: chromium project, `webServer` boots both
+    `apps/server` (against the isolated `flowboard_test` database, `prisma migrate deploy`
+    first) and `apps/web`, each with an `e2e-test-secret` `JWT_SECRET` shared between them
+  - [x] 8.2 Golden path (`golden-path.spec.ts`): signup → create board → create card →
+    drag card to another column → reload confirms the move persisted server-side
+  - [x] 8.3 Two-browser-context live sync (`live-sync.spec.ts`): user A drags a card;
+    user B's page (a second context, same account, cookies shared via `storageState` —
+    boards are single-owner) shows the move live via the `board:sync` broadcast, no refresh
+  - [x] 8.4 Concurrency test (`concurrency.spec.ts`): two contexts stage a drag on the same
+    card to two different columns, then drop back-to-back to force a real same-version
+    race. Asserts exactly one side receives a `card:conflict` frame (never both, never
+    neither) and both clients converge on the same authoritative column afterward — no
+    silently lost update
+  - [x] 8.5 Found and fixed a real bug via the golden-path test: `useBoardSocket.send`
+    called `socket.send()` unconditionally, which throws `InvalidStateError` if triggered
+    before the WebSocket finishes opening. Fixed test-first (strengthened `FakeWebSocket`
+    to model `readyState` and throw like a real socket, wrote a failing test for the race,
+    then queued sends made before `open` and flushed them once connected)
+  - [x] 8.6 Full gate: `npm run build && npm run lint && npm run format:check && npm test
+    && npx playwright test` (run from `e2e/`) — all green, confirmed stable across repeated
+    runs of the concurrency test
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
