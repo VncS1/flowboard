@@ -19,6 +19,20 @@
   - [x] 5.6 Full gate: build, lint, format:check, test — all green
   - Also extended `GET /boards/:id` (Phase 3) to nest each column's cards, ordered by
     position, needed by the board detail page — covered by a new server integration test.
+- [x] Phase 6 — Frontend real-time + drag-and-drop (done, commit 580f0cf)
+  - [x] 6.1 `useBoardSocket` hook (`apps/web/src/lib/useBoardSocket.ts`): connects to
+    `NEXT_PUBLIC_WS_URL`, validates every inbound message against the Phase 1
+    `serverToClientMessageSchema`, rejects/logs anything that fails to parse
+  - [x] 6.2 `BoardDetail` promoted to a Client Component; drag-and-drop via `@dnd-kit/core`
+    (Open Decision #3), immediate optimistic local move on drop
+  - [x] 6.3 Emits `card:move` per the shared contract; on `card:conflict` rolls back the
+    optimistic move to its pre-drag snapshot and calls `router.refresh()` to refetch the
+    authoritative board
+  - [x] 6.4 Applies `board:sync` events from other clients live, no page refresh needed
+  - [x] 6.5 Component tests with a mocked `WebSocket` (`FakeWebSocket` test double,
+    jsdom has no native `WebSocket`) and a mocked `@dnd-kit/core` for deterministic drag
+    simulation, including an explicit optimistic-rollback-on-conflict test
+  - [x] 6.6 Full gate: build, lint, format:check, test — all green
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
