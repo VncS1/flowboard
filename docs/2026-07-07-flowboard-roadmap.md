@@ -10,6 +10,15 @@
   - [x] 4.4 moveCard optimistic-concurrency handler (UPDATE ... WHERE version=$2)
   - [x] 4.5 Broadcast successful move to other subscribed sockets (`board:sync`, sender excluded)
   - [x] 4.6 Conflict response contract (`card:conflict`, reason `stale-version`, carries authoritative card)
+- [x] Phase 5 — Frontend foundation (done, commit bb8a752)
+  - [x] 5.1 Scaffold `apps/web` (Next.js App Router, TS strict, Tailwind v4 CSS-first `@theme`)
+  - [x] 5.2 Board list page (Server Component, fetches `GET /boards`)
+  - [x] 5.3 Board detail shell page (Server Component, static columns/cards, fetches `GET /boards/:id`)
+  - [x] 5.4 Vitest + React Testing Library setup
+  - [x] 5.5 Component tests for both pages (written test-first)
+  - [x] 5.6 Full gate: build, lint, format:check, test — all green
+  - Also extended `GET /boards/:id` (Phase 3) to nest each column's cards, ordered by
+    position, needed by the board detail page — covered by a new server integration test.
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
