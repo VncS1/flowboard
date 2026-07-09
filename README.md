@@ -30,10 +30,11 @@ See `CLAUDE.md` for full project conventions and architecture, and
 
 ## Status
 
-Phases 0–3 are done: monorepo bootstrap, the shared WebSocket message contract, the
-Postgres/Prisma schema, and a Fastify REST API (auth, Board CRUD, Card CRUD). The
-WebSocket layer with optimistic-concurrency card moves (Phase 4) is next — see the
-roadmap for the full plan.
+Phases 0–5 are done: monorepo bootstrap, the shared WebSocket message contract, the
+Postgres/Prisma schema, a Fastify REST API (auth, Board CRUD, Card CRUD), the
+WebSocket layer with optimistic-concurrency card moves, and a Next.js frontend
+foundation (board list + a static board detail page). Frontend real-time and
+drag-and-drop (Phase 6) is next — see the roadmap for the full plan.
 
 ## Prerequisites
 
@@ -65,6 +66,9 @@ A separate `apps/server/.env.test` (same shape, pointing at `flowboard_test`) is
 automatically when running tests — see `docs/Phase2-tests.md` if you need to recreate
 it.
 
+`apps/web` reads `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:4000` if unset,
+so it's optional for local dev against the default server port).
+
 ### Database migrations & seed data
 
 ```bash
@@ -80,9 +84,19 @@ cd apps/server
 npm run dev
 ```
 
-Starts the Fastify server on `http://localhost:4000` (override with `PORT`). There's no
-frontend yet (`apps/web` lands in Phase 5), so the backend is exercised directly via its
-REST API for now.
+Starts the Fastify server on `http://localhost:4000` (override with `PORT`).
+
+```bash
+cd apps/web
+npm run dev
+```
+
+Starts the Next.js dev server on `http://localhost:3000`. `/` redirects to `/boards`
+(a Server Component list fetched from the REST API); `/boards/:id` renders that
+board's columns and cards. There's no login UI yet (Phase 7), so both pages need a
+`token` cookie from the API's `/auth/signup` or `/auth/login` to render anything
+other than a "sign in" message — see "Trying out the API" below to get one. Card
+drag-and-drop and live updates from other clients land in Phase 6.
 
 ## Trying out the API
 
@@ -139,20 +153,23 @@ Boards and cards are scoped to their owner: requests from a different authentica
 ## Testing
 
 ```bash
-npm test                               # every workspace: packages/shared + apps/server
-npm run build                          # tsc --noEmit across all workspaces
+npm test                               # every workspace: packages/shared + apps/server + apps/web
+npm run build                          # tsc --noEmit (apps/server) / next build (apps/web)
 npm run lint
 npm run format:check
 ```
 
 `apps/server`'s test command applies pending Prisma migrations to `flowboard_test`
 first, then runs Vitest integration tests against that real database (no mocking) —
-covering the Prisma schema, auth, and the Board/Card REST routes, including
-cross-user authorization checks. `packages/shared` has unit tests for every WebSocket
-message schema (accept + reject cases).
+covering the Prisma schema, auth, the Board/Card REST routes (including cross-user
+authorization checks), and the WebSocket layer (handshake auth, broadcast, and the
+optimistic-concurrency conflict path for concurrent card moves). `packages/shared`
+has unit tests for every WebSocket message schema (accept + reject cases). `apps/web`
+has Vitest + React Testing Library component tests for the board list/detail pages
+and their data-fetching layer.
 
 Playwright E2E tests (including the two-browser-context real-time checks) land in
-Phase 8, once the frontend and WebSocket layer exist.
+Phase 8, once the frontend has drag-and-drop and live updates (Phase 6).
 
 ## Deploying
 
