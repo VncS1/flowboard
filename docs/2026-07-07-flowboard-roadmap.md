@@ -33,6 +33,24 @@
     jsdom has no native `WebSocket`) and a mocked `@dnd-kit/core` for deterministic drag
     simulation, including an explicit optimistic-rollback-on-conflict test
   - [x] 6.6 Full gate: build, lint, format:check, test — all green
+- [x] Phase 7 — Auth UI & route protection (done, commit e06e474)
+  - [x] 7.1 Login/signup pages (`apps/web/src/app/login`, `/signup`) calling the Phase 3
+    `POST /auth/login` / `/auth/signup` routes with `credentials: 'include'`; `@fastify/cors`
+    registered on the backend (`CORS_ORIGIN`, credentials enabled) so the browser accepts
+    the cross-origin, same-site cookie between `localhost:3000` and `localhost:4000`
+  - [x] 7.2 `POST /auth/logout` clears the httpOnly cookie server-side (JS can't touch it
+    directly)
+  - [x] 7.3 `apps/web/src/proxy.ts` (Next.js renamed the `middleware.ts` convention to
+    `proxy.ts` in this Next version — see nextjs.org/docs/messages/middleware-to-proxy)
+    guards `/boards/:path*`: verifies the `token` cookie's JWT signature and expiry via
+    `jose`, redirects to `/login` if absent or invalid. Requires `JWT_SECRET` in
+    `apps/web/.env` to match `apps/server/.env` (both gitignored, documented in each)
+  - [x] 7.4 Clear, mapped error messages on both forms (invalid credentials, email already
+    registered, invalid input) instead of raw API errors
+  - [x] 7.5 Component tests with mocked `fetch` for login/signup, plus a `proxy.test.ts`
+    integration test covering missing/invalid/expired/valid session cookies against a real
+    `NextRequest`
+  - [x] 7.6 Full gate: build, lint, format:check, test — all green
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
