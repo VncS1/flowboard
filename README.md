@@ -30,11 +30,12 @@ See `CLAUDE.md` for full project conventions and architecture, and
 
 ## Status
 
-Phases 0–5 are done: monorepo bootstrap, the shared WebSocket message contract, the
+Phases 0–7 are done: monorepo bootstrap, the shared WebSocket message contract, the
 Postgres/Prisma schema, a Fastify REST API (auth, Board CRUD, Card CRUD), the
-WebSocket layer with optimistic-concurrency card moves, and a Next.js frontend
-foundation (board list + a static board detail page). Frontend real-time and
-drag-and-drop (Phase 6) is next — see the roadmap for the full plan.
+WebSocket layer with optimistic-concurrency card moves, a Next.js frontend with
+real-time drag-and-drop (`@dnd-kit`, optimistic move + conflict rollback), and a full
+login/signup flow with middleware-based route protection for the board pages. E2E
+tests with Playwright (Phase 8) are next — see the roadmap for the full plan.
 
 ## Prerequisites
 
@@ -60,6 +61,7 @@ yourself, it's not committed):
 ```bash
 DATABASE_URL="postgresql://flowboard:flowboard@localhost:5432/flowboard?schema=public"
 JWT_SECRET="pick-any-long-random-string-for-local-dev"
+CORS_ORIGIN="http://localhost:3000"
 ```
 
 A separate `apps/server/.env.test` (same shape, pointing at `flowboard_test`) is used
@@ -67,7 +69,15 @@ automatically when running tests — see `docs/Phase2-tests.md` if you need to r
 it.
 
 `apps/web` reads `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:4000` if unset,
-so it's optional for local dev against the default server port).
+so it's optional for local dev against the default server port). It also needs its own
+`apps/web/.env` (gitignored, create it yourself) with a `JWT_SECRET` **matching**
+`apps/server/.env`'s value — `apps/web/src/proxy.ts` verifies the session cookie's JWT
+signature itself before letting a request through to `/boards/*`, so both processes
+have to agree on the secret:
+
+```bash
+JWT_SECRET="pick-any-long-random-string-for-local-dev"
+```
 
 ### Database migrations & seed data
 
@@ -90,12 +100,14 @@ healthcheck), then runs the Fastify server and the Next.js dev server together, 
 stopped too).
 
 - Fastify: `http://localhost:4000` (override the port with `PORT`)
-- Next.js: `http://localhost:3000` — `/` redirects to `/boards` (a Server Component
-  list fetched from the REST API); `/boards/:id` renders that board's columns and
-  cards. There's no login UI yet (Phase 7), so both pages need a `token` cookie from
-  the API's `/auth/signup` or `/auth/login` to render anything other than a "sign in"
-  message — see "Trying out the API" below to get one. Card drag-and-drop and live
-  updates from other clients land in Phase 6.
+- Next.js: `http://localhost:3000` — `/` redirects to `/boards`. Visit `/signup` to
+  create an account or `/login` to sign in; `apps/web/src/proxy.ts` redirects any
+  request to `/boards/*` without a valid session cookie straight to `/login`. Once
+  signed in, `/boards` lists your boards (Server Component, fetched from the REST
+  API) and `/boards/:id` renders that board's columns/cards with live drag-and-drop:
+  moving a card applies immediately (optimistic update), broadcasts over the
+  WebSocket to any other client viewing the same board, and rolls back automatically
+  if the server reports a stale-version conflict.
 
 Prefer to run a single piece on its own? `npm run dev:db` starts just Postgres, and
 `npm run dev --workspace apps/server` / `--workspace apps/web` start one app at a
@@ -103,8 +115,10 @@ time.
 
 ## Trying out the API
 
-A full walkthrough with `curl` (cookies are used to carry the JWT, so keep a cookie jar
-across requests):
+The fastest way to try the app is the browser UI (`/signup`, `/login`, `/boards`). The
+walkthrough below hits the REST API directly with `curl` instead — useful for
+scripting or debugging without a browser (cookies are used to carry the JWT, so keep a
+cookie jar across requests):
 
 ```bash
 # 1. Sign up — creates the user and sets the auth cookie
@@ -144,6 +158,7 @@ Boards and cards are scoped to their owner: requests from a different authentica
 | `GET /health`                                   | no            | liveness check                                        |
 | `POST /auth/signup`                             | no            | bcrypt-hashed password, sets `token` cookie           |
 | `POST /auth/login`                              | no            | sets `token` cookie                                   |
+| `POST /auth/logout`                             | no            | clears the `token` cookie                             |
 | `POST /boards`                                  | yes           | creates board + default Todo/Doing/Done columns       |
 | `GET /boards`                                   | yes           | lists boards owned by the caller                      |
 | `GET /boards/:id`                               | yes           | 404 if not the owner                                  |
@@ -164,15 +179,18 @@ npm run format:check
 
 `apps/server`'s test command applies pending Prisma migrations to `flowboard_test`
 first, then runs Vitest integration tests against that real database (no mocking) —
-covering the Prisma schema, auth, the Board/Card REST routes (including cross-user
-authorization checks), and the WebSocket layer (handshake auth, broadcast, and the
-optimistic-concurrency conflict path for concurrent card moves). `packages/shared`
-has unit tests for every WebSocket message schema (accept + reject cases). `apps/web`
-has Vitest + React Testing Library component tests for the board list/detail pages
-and their data-fetching layer.
+covering the Prisma schema, auth (including CORS and logout), the Board/Card REST
+routes (including cross-user authorization checks), and the WebSocket layer (handshake
+auth, broadcast, and the optimistic-concurrency conflict path for concurrent card
+moves). `packages/shared` has unit tests for every WebSocket message schema (accept +
+reject cases). `apps/web` has Vitest + React Testing Library component tests for the
+board list/detail pages (including the WebSocket-driven drag-and-drop, optimistic
+update and rollback-on-conflict paths, with the socket and `@dnd-kit` mocked) and the
+login/signup forms (mocked `fetch`), plus an integration test for `proxy.ts` covering
+missing/invalid/expired/valid session cookies.
 
 Playwright E2E tests (including the two-browser-context real-time checks) land in
-Phase 8, once the frontend has drag-and-drop and live updates (Phase 6).
+Phase 8.
 
 ## Deploying
 

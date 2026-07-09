@@ -51,6 +51,11 @@
     integration test covering missing/invalid/expired/valid session cookies against a real
     `NextRequest`
   - [x] 7.6 Full gate: build, lint, format:check, test — all green
+  - [x] 7.7 Manually verified against the real dev stack (Postgres + Fastify + Next.js,
+    not just mocks): signup sets the `httpOnly`/`Secure`/`SameSite=Lax` cookie with the
+    correct `Access-Control-Allow-Origin`/`-Credentials` headers; `/boards` without the
+    cookie 307-redirects to `/login`; `/boards` with the cookie renders; login/logout and
+    the `/login`, `/signup` pages all confirmed live
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
