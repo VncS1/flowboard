@@ -1,8 +1,14 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FakeWebSocket } from "@/lib/testUtils/fakeWebSocket";
+
+const mockCreateCard = vi.fn();
+vi.mock("@/lib/boardActions", () => ({
+  createCard: (...args: unknown[]) => mockCreateCard(...args),
+}));
 
 const { capturedHandlers } = vi.hoisted(() => ({
   capturedHandlers: { onDragEnd: undefined as ((event: unknown) => void) | undefined },
@@ -82,6 +88,7 @@ const board = {
 describe("BoardDetail", () => {
   beforeEach(() => {
     mockRefresh.mockClear();
+    mockCreateCard.mockReset();
     capturedHandlers.onDragEnd = undefined;
   });
 
@@ -108,6 +115,7 @@ describe("BoardDetail", () => {
 
   it("optimistically moves a card to the target column immediately and emits card:move", () => {
     render(<BoardDetail board={board} />);
+    act(() => FakeWebSocket.latest().emitOpen());
 
     act(() => {
       capturedHandlers.onDragEnd?.({ active: { id: "card1" }, over: { id: "c2" } });
@@ -219,5 +227,45 @@ describe("BoardDetail", () => {
     expect(within(todoColumn).getByText("Write tests")).toBeInTheDocument();
 
     errorSpy.mockRestore();
+  });
+
+  it("adds a new card to the column immediately after a successful submit", async () => {
+    mockCreateCard.mockResolvedValue({
+      status: "ok",
+      card: {
+        id: "card3",
+        boardId: "1",
+        columnId: "c2",
+        title: "New task",
+        position: 0,
+        version: 1,
+      },
+    });
+    const user = userEvent.setup();
+    render(<BoardDetail board={board} />);
+
+    const doneColumn = screen.getByRole("heading", { name: /done/i }).closest("section")!;
+    await user.type(within(doneColumn).getByLabelText(/new card title/i), "New task");
+    await user.click(within(doneColumn).getByRole("button", { name: /add card/i }));
+
+    await waitFor(() => expect(mockCreateCard).toHaveBeenCalledWith("1", "c2", "New task"));
+    expect(within(doneColumn).getByText("New task")).toBeInTheDocument();
+  });
+
+  it("shows a clear error message when creating a card fails", async () => {
+    mockCreateCard.mockResolvedValue({
+      status: "error",
+      message: "Could not create the card. Please try again.",
+    });
+    const user = userEvent.setup();
+    render(<BoardDetail board={board} />);
+
+    const doneColumn = screen.getByRole("heading", { name: /done/i }).closest("section")!;
+    await user.type(within(doneColumn).getByLabelText(/new card title/i), "New task");
+    await user.click(within(doneColumn).getByRole("button", { name: /add card/i }));
+
+    expect(await within(doneColumn).findByRole("alert")).toHaveTextContent(
+      "Could not create the card. Please try again.",
+    );
   });
 });

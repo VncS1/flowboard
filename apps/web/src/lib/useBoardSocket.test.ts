@@ -97,7 +97,32 @@ describe("useBoardSocket", () => {
     errorSpy.mockRestore();
   });
 
-  it("sends a card:move message over the socket as JSON", () => {
+  it("sends a card:move message over the socket as JSON once the connection is open", () => {
+    const { result } = renderHook(() =>
+      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn() }),
+    );
+    act(() => FakeWebSocket.latest().emitOpen());
+
+    act(() => {
+      result.current.send({
+        type: "card:move",
+        cardId: "card-1",
+        toColumnId: "c2",
+        toPosition: 0,
+        version: 1,
+      });
+    });
+
+    expect(JSON.parse(FakeWebSocket.latest().sent[0])).toEqual({
+      type: "card:move",
+      cardId: "card-1",
+      toColumnId: "c2",
+      toPosition: 0,
+      version: 1,
+    });
+  });
+
+  it("queues a send made before the connection opens and flushes it once open", () => {
     const { result } = renderHook(() =>
       useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn() }),
     );
@@ -111,6 +136,10 @@ describe("useBoardSocket", () => {
         version: 1,
       });
     });
+
+    expect(FakeWebSocket.latest().sent).toHaveLength(0);
+
+    act(() => FakeWebSocket.latest().emitOpen());
 
     expect(JSON.parse(FakeWebSocket.latest().sent[0])).toEqual({
       type: "card:move",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { BoardsList } from "@/components/BoardsList";
+import { CreateBoardForm } from "@/components/CreateBoardForm";
 import { getBoards } from "@/lib/api";
 
 export default async function BoardsPage() {
@@ -23,6 +24,9 @@ export default async function BoardsPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="mb-8 text-xl font-semibold tracking-tight">Boards</h1>
+      <div className="mb-8">
+        <CreateBoardForm />
+      </div>
       <BoardsList boards={result.boards} />
     </main>
   );

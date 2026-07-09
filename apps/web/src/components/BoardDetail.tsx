@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import {
   DndContext,
@@ -15,9 +15,15 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 
-import type { BoardSyncMessage, CardConflictMessage, CardMoveMessage } from "@flowboard/shared";
+import type {
+  BoardSyncMessage,
+  Card,
+  CardConflictMessage,
+  CardMoveMessage,
+} from "@flowboard/shared";
 
 import type { BoardDetail as BoardDetailData } from "@/lib/api";
+import { createCard } from "@/lib/boardActions";
 import { moveCardOptimistically, nestCardsIntoColumns, type BoardColumns } from "@/lib/boardState";
 import { useBoardSocket } from "@/lib/useBoardSocket";
 
@@ -63,6 +69,67 @@ function DroppableColumn({
       <h2 className="mb-3 text-sm font-medium">{name}</h2>
       {children}
     </section>
+  );
+}
+
+function NewCardForm({
+  boardId,
+  columnId,
+  onCreated,
+}: {
+  boardId: string;
+  columnId: string;
+  onCreated: (card: Card) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    const result = await createCard(boardId, columnId, title);
+
+    setSubmitting(false);
+
+    if (result.status === "error") {
+      setError(result.message);
+      return;
+    }
+
+    setTitle("");
+    onCreated(result.card);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2">
+      <label htmlFor={`new-card-${columnId}`} className="sr-only">
+        New card title
+      </label>
+      <input
+        id={`new-card-${columnId}`}
+        type="text"
+        required
+        placeholder="New card title"
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        className="border-border bg-bg text-ink rounded-md border px-3 py-2 text-sm"
+      />
+      <button
+        type="submit"
+        disabled={submitting}
+        className="border-border hover:bg-surface text-ink rounded-md border px-3 py-2 text-sm font-medium disabled:opacity-50"
+      >
+        {submitting ? "Adding…" : "Add card"}
+      </button>
+      {error ? (
+        <p role="alert" className="text-danger text-sm">
+          {error}
+        </p>
+      ) : null}
+    </form>
   );
 }
 
@@ -123,6 +190,14 @@ export function BoardDetail({ board }: { board: BoardDetailData }) {
     [columns, socket],
   );
 
+  const handleCardCreated = useCallback((card: Card) => {
+    setColumns((current) =>
+      current.map((column) =>
+        column.id === card.columnId ? { ...column, cards: [...column.cards, card] } : column,
+      ),
+    );
+  }, []);
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold tracking-tight">{board.name}</h1>
@@ -139,6 +214,7 @@ export function BoardDetail({ board }: { board: BoardDetailData }) {
                   ))}
                 </ul>
               )}
+              <NewCardForm boardId={board.id} columnId={column.id} onCreated={handleCardCreated} />
             </DroppableColumn>
           ))}
         </div>

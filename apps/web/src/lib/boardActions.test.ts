@@ -1,0 +1,110 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { createBoard, createCard } from "./boardActions";
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const fetchMock = vi.fn();
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("createBoard", () => {
+  it("posts the board name with credentials: include and returns the created board", async () => {
+    const board = { id: "b1", name: "Sprint Board", ownerId: "u1" };
+    fetchMock.mockResolvedValue(jsonResponse(201, { board }));
+
+    const result = await createBoard("Sprint Board");
+
+    expect(result).toEqual({ status: "ok", board });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/boards"),
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ name: "Sprint Board" }),
+      }),
+    );
+  });
+
+  it("returns a clear message for an invalid name", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(400, { error: "invalid_body", issues: [] }));
+
+    const result = await createBoard("");
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Please check the information you entered.",
+    });
+  });
+
+  it("returns a clear message when the request fails to reach the server", async () => {
+    fetchMock.mockRejectedValue(new TypeError("network error"));
+
+    const result = await createBoard("Sprint Board");
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Could not reach the server. Please try again.",
+    });
+  });
+});
+
+describe("createCard", () => {
+  it("posts the card title with credentials: include and returns the created card", async () => {
+    const card = {
+      id: "c1",
+      boardId: "b1",
+      columnId: "col1",
+      title: "Write tests",
+      position: 0,
+      version: 1,
+    };
+    fetchMock.mockResolvedValue(jsonResponse(201, { card }));
+
+    const result = await createCard("b1", "col1", "Write tests");
+
+    expect(result).toEqual({ status: "ok", card });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/boards/b1/columns/col1/cards"),
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ title: "Write tests" }),
+      }),
+    );
+  });
+
+  it("returns a clear message for an invalid title", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(400, { error: "invalid_body", issues: [] }));
+
+    const result = await createCard("b1", "col1", "");
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Please check the information you entered.",
+    });
+  });
+
+  it("returns a clear message when the column no longer exists", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(404, { error: "not_found" }));
+
+    const result = await createCard("b1", "missing-column", "Write tests");
+
+    expect(result).toEqual({
+      status: "error",
+      message: "This column no longer exists. Please refresh and try again.",
+    });
+  });
+});

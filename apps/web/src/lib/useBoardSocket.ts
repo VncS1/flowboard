@@ -26,9 +26,19 @@ export function useBoardSocket(boardId: string, handlers: BoardSocketHandlers): 
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
+  const pendingRef = useRef<string[]>([]);
+
   useEffect(() => {
     const socket = new WebSocket(resolveWsUrl(boardId));
     socketRef.current = socket;
+    pendingRef.current = [];
+
+    function handleOpen() {
+      for (const data of pendingRef.current) {
+        socket.send(data);
+      }
+      pendingRef.current = [];
+    }
 
     function handleMessage(event: MessageEvent) {
       let raw: unknown;
@@ -55,9 +65,11 @@ export function useBoardSocket(boardId: string, handlers: BoardSocketHandlers): 
       }
     }
 
+    socket.addEventListener("open", handleOpen);
     socket.addEventListener("message", handleMessage);
 
     return () => {
+      socket.removeEventListener("open", handleOpen);
       socket.removeEventListener("message", handleMessage);
       socket.close();
       socketRef.current = null;
@@ -65,7 +77,13 @@ export function useBoardSocket(boardId: string, handlers: BoardSocketHandlers): 
   }, [boardId]);
 
   const send = useCallback((message: ClientToServerMessage) => {
-    socketRef.current?.send(JSON.stringify(message));
+    const socket = socketRef.current;
+    const data = JSON.stringify(message);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(data);
+    } else {
+      pendingRef.current.push(data);
+    }
   }, []);
 
   return { send };
