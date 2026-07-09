@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { BoardsList } from "@/components/BoardsList";
 import { getBoards } from "@/lib/api";
 
@@ -8,7 +10,11 @@ export default async function BoardsPage() {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <p className="text-muted text-sm">
-          You need to sign in to see your boards. (Login UI ships in Phase 7.)
+          You need to{" "}
+          <Link href="/login" className="text-primary hover:underline">
+            sign in
+          </Link>{" "}
+          to see your boards.
         </p>
       </main>
     );

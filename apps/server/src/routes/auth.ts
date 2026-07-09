@@ -77,4 +77,9 @@ export async function authRoutes(app: FastifyInstance) {
 
     return reply.code(200).send({ user: toPublicUser(user) });
   });
+
+  app.post("/auth/logout", async (_request, reply) => {
+    reply.clearCookie("token", { path: "/" });
+    return reply.code(200).send({ ok: true });
+  });
 }

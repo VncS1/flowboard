@@ -120,3 +120,24 @@ describe("POST /auth/login", () => {
     await app.close();
   });
 });
+
+describe("POST /auth/logout", () => {
+  it("clears the auth cookie", async () => {
+    const app = buildApp();
+    await app.inject({
+      method: "POST",
+      url: "/auth/signup",
+      payload: { email: "erin@example.com", name: "Erin", password: "correct-horse" },
+    });
+
+    const response = await app.inject({ method: "POST", url: "/auth/logout" });
+
+    expect(response.statusCode).toBe(200);
+    const tokenCookie = response.cookies.find((cookie) => cookie.name === "token");
+    expect(tokenCookie).toBeDefined();
+    expect(tokenCookie?.value).toBe("");
+    expect(Number(tokenCookie?.maxAge)).toBeLessThanOrEqual(0);
+
+    await app.close();
+  });
+});

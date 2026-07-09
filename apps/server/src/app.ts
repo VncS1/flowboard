@@ -1,3 +1,4 @@
+import cors from "@fastify/cors";
 import Fastify from "fastify";
 
 import { authPlugin } from "./plugins/auth.js";
@@ -8,6 +9,11 @@ import { cardRoutes } from "./routes/cards.js";
 
 export function buildApp() {
   const app = Fastify();
+
+  app.register(cors, {
+    origin: [process.env["CORS_ORIGIN"] ?? "http://localhost:3000"],
+    credentials: true,
+  });
 
   app.get("/health", async () => {
     return { status: "ok" };

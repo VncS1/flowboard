@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.0",
+    "@fastify/cors": "^11.3.0",
     "@fastify/jwt": "^10.2.0",
     "@fastify/websocket": "^11.3.0",
     "@flowboard/shared": "^0.0.0",

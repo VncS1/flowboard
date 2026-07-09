@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BoardDetail } from "@/components/BoardDetail";
@@ -15,7 +16,11 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
     return (
       <main className="mx-auto max-w-4xl px-6 py-16">
         <p className="text-muted text-sm">
-          You need to sign in to see this board. (Login UI ships in Phase 7.)
+          You need to{" "}
+          <Link href="/login" className="text-primary hover:underline">
+            sign in
+          </Link>{" "}
+          to see this board.
         </p>
       </main>
     );

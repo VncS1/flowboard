@@ -9,6 +9,7 @@
   --color-primary: oklch(0.55 0.19 288);
   --color-primary-hover: oklch(0.48 0.19 288);
   --color-on-primary: oklch(1 0 0);
+  --color-danger: oklch(0.55 0.22 25);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,6 +21,7 @@
     --color-border: oklch(0.22 0.006 288);
     --color-primary: oklch(0.6 0.18 288);
     --color-primary-hover: oklch(0.67 0.18 288);
+    --color-danger: oklch(0.72 0.19 25);
   }
 }
 
@@ -32,6 +34,7 @@
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
   --color-on-primary: var(--color-on-primary);
+  --color-danger: var(--color-danger);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
