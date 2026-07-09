@@ -17,3 +17,7 @@ docs/
 # spec); Prettier only recognizes frontmatter as the very first line, so it would
 # otherwise "reformat" (corrupt) the YAML indentation.
 apps/web/DESIGN.md
+
+# Next.js-generated; its one line of content differs between `next dev` and
+# `next build` runs, which otherwise flip-flops format:check on every run.
+apps/web/next-env.d.ts

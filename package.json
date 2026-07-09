@@ -19,12 +19,15 @@
     "format:check": "prettier --check .",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "dev:db": "docker compose up -d --wait db",
+    "dev": "npm run dev:db && concurrently -n server,web -c blue,magenta \"npm run dev --workspace apps/server\" \"npm run dev --workspace apps/web\"",
     "prepare": "husky"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.39.4",
+    "concurrently": "^10.0.3",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.2",
     "husky": "^9.1.7",

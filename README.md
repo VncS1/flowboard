@@ -80,23 +80,26 @@ npm run prisma:seed             # optional: creates a demo user/board/columns/ca
 ## Running the app
 
 ```bash
-cd apps/server
 npm run dev
 ```
 
-Starts the Fastify server on `http://localhost:4000` (override with `PORT`).
+One command for the whole stack: starts the Postgres container (waits for its
+healthcheck), then runs the Fastify server and the Next.js dev server together, with
+`[server]`/`[web]` prefixed, color-coded output. `Ctrl-C` stops both app processes
+(Postgres keeps running in the background — `docker compose down` if you want it
+stopped too).
 
-```bash
-cd apps/web
-npm run dev
-```
+- Fastify: `http://localhost:4000` (override the port with `PORT`)
+- Next.js: `http://localhost:3000` — `/` redirects to `/boards` (a Server Component
+  list fetched from the REST API); `/boards/:id` renders that board's columns and
+  cards. There's no login UI yet (Phase 7), so both pages need a `token` cookie from
+  the API's `/auth/signup` or `/auth/login` to render anything other than a "sign in"
+  message — see "Trying out the API" below to get one. Card drag-and-drop and live
+  updates from other clients land in Phase 6.
 
-Starts the Next.js dev server on `http://localhost:3000`. `/` redirects to `/boards`
-(a Server Component list fetched from the REST API); `/boards/:id` renders that
-board's columns and cards. There's no login UI yet (Phase 7), so both pages need a
-`token` cookie from the API's `/auth/signup` or `/auth/login` to render anything
-other than a "sign in" message — see "Trying out the API" below to get one. Card
-drag-and-drop and live updates from other clients land in Phase 6.
+Prefer to run a single piece on its own? `npm run dev:db` starts just Postgres, and
+`npm run dev --workspace apps/server` / `--workspace apps/web` start one app at a
+time.
 
 ## Trying out the API
 
