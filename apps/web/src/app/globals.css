@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: oklch(1 0 0);
+  --color-surface: oklch(0.97 0.006 288);
+  --color-ink: oklch(0.19 0.02 288);
+  --color-muted: oklch(0.46 0.015 288);
+  --color-border: oklch(0.9 0.006 288);
+  --color-primary: oklch(0.55 0.19 288);
+  --color-primary-hover: oklch(0.48 0.19 288);
+  --color-on-primary: oklch(1 0 0);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: oklch(0.09 0 0);
+    --color-surface: oklch(0.14 0.006 288);
+    --color-ink: oklch(0.94 0.004 288);
+    --color-muted: oklch(0.62 0.01 288);
+    --color-border: oklch(0.22 0.006 288);
+    --color-primary: oklch(0.6 0.18 288);
+    --color-primary-hover: oklch(0.67 0.18 288);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-ink: var(--color-ink);
+  --color-muted: var(--color-muted);
+  --color-border: var(--color-border);
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-on-primary: var(--color-on-primary);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

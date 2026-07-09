@@ -12,3 +12,8 @@ CLAUDE.md
 docs/
 .claude/
 .superpowers/
+
+# DESIGN.md leads with a SEED comment before its YAML frontmatter (impeccable skill
+# spec); Prettier only recognizes frontmatter as the very first line, so it would
+# otherwise "reformat" (corrupt) the YAML indentation.
+apps/web/DESIGN.md

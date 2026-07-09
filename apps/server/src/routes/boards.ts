@@ -62,7 +62,12 @@ export async function boardRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const board = await prisma.board.findFirst({
         where: { id: request.params.id, ownerId: userIdFrom(request) },
-        include: { columns: { orderBy: { position: "asc" } } },
+        include: {
+          columns: {
+            orderBy: { position: "asc" },
+            include: { cards: { orderBy: { position: "asc" } } },
+          },
+        },
       });
 
       if (!board) {

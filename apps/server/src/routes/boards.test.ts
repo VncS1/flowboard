@@ -118,6 +118,46 @@ describe("GET /boards/:id", () => {
 
     await app.close();
   });
+
+  it("nests each column's cards ordered by position", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cards-getter@example.com");
+    const board = (await createBoard(app, owner.token, "Board With Cards")) as unknown as {
+      id: string;
+      columns: { id: string; name: string }[];
+    };
+    const todoColumn = board.columns.find((column) => column.name === "Todo")!;
+
+    await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/columns/${todoColumn.id}/cards`,
+      cookies: { token: owner.token },
+      payload: { title: "First card" },
+    });
+    await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/columns/${todoColumn.id}/cards`,
+      cookies: { token: owner.token },
+      payload: { title: "Second card" },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/boards/${board.id}`,
+      cookies: { token: owner.token },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const returnedTodoColumn = response
+      .json()
+      .board.columns.find((column: { name: string }) => column.name === "Todo");
+    expect(returnedTodoColumn.cards.map((card: { title: string }) => card.title)).toEqual([
+      "First card",
+      "Second card",
+    ]);
+
+    await app.close();
+  });
 });
 
 describe("PATCH /boards/:id", () => {
