@@ -23,6 +23,18 @@ function findCard(columns: BoardColumns, cardId: string): Card | undefined {
   return undefined;
 }
 
+/** Appends `card` to its column, unless a card with the same id is already present.
+ * Needed because a REST create's board:sync broadcast can reach this client's own
+ * socket before the create's HTTP response resolves, so the caller's optimistic
+ * append must tolerate the card having already arrived via sync. */
+export function addCardIfAbsent(columns: BoardColumns, card: Card): BoardColumns {
+  if (findCard(columns, card.id)) return columns;
+
+  return columns.map((column) =>
+    column.id === card.columnId ? { ...column, cards: [...column.cards, card] } : column,
+  );
+}
+
 export function moveCardOptimistically(
   columns: BoardColumns,
   input: { cardId: string; toColumnId: string; toPosition: number },

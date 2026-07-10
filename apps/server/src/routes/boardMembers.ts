@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "../db/client.js";
 import { findAccessibleBoard } from "../lib/boardAccess.js";
+import { broadcastBoardSync } from "../realtime/broadcast.js";
 
 const inviteMemberSchema = z.object({
   email: z.string().email(),
@@ -47,6 +48,8 @@ export async function boardMemberRoutes(app: FastifyInstance) {
         data: { boardId: board.id, userId: invitee.id, role: "MEMBER" },
       });
 
+      await broadcastBoardSync(board.id);
+
       return reply.code(201).send({ member });
     },
   );
@@ -72,6 +75,8 @@ export async function boardMemberRoutes(app: FastifyInstance) {
       }
 
       await prisma.boardMember.delete({ where: { id: member.id } });
+
+      await broadcastBoardSync(board.id);
 
       return reply.code(204).send();
     },

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "../db/client.js";
 import { findAccessibleBoard } from "../lib/boardAccess.js";
+import { broadcastBoardSync } from "../realtime/broadcast.js";
 
 const createBoardSchema = z.object({
   name: z.string().min(1),
@@ -101,6 +102,8 @@ export async function boardRoutes(app: FastifyInstance) {
         data: { name: parsed.data.name },
         include: { columns: { orderBy: { position: "asc" } } },
       });
+
+      await broadcastBoardSync(board.id);
 
       return reply.code(200).send({ board });
     },

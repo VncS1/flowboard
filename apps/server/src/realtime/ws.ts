@@ -1,46 +1,11 @@
-import { clientToServerMessageSchema, type ServerToClientMessage } from "@flowboard/shared";
+import { clientToServerMessageSchema } from "@flowboard/shared";
 import websocketPlugin from "@fastify/websocket";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
-import type { WebSocket } from "ws";
 
-import { prisma } from "../db/client.js";
 import { findAccessibleBoard } from "../lib/boardAccess.js";
+import { broadcastBoardSync, send, subscribe, unsubscribe } from "./broadcast.js";
 import { moveCard } from "./moveCard.js";
-
-const boardSockets = new Map<string, Set<WebSocket>>();
-
-function subscribe(boardId: string, socket: WebSocket) {
-  let sockets = boardSockets.get(boardId);
-  if (!sockets) {
-    sockets = new Set();
-    boardSockets.set(boardId, sockets);
-  }
-  sockets.add(socket);
-}
-
-function unsubscribe(boardId: string, socket: WebSocket) {
-  const sockets = boardSockets.get(boardId);
-  if (!sockets) return;
-  sockets.delete(socket);
-  if (sockets.size === 0) {
-    boardSockets.delete(boardId);
-  }
-}
-
-function send(socket: WebSocket, message: ServerToClientMessage) {
-  socket.send(JSON.stringify(message));
-}
-
-function broadcast(boardId: string, message: ServerToClientMessage, exclude: WebSocket) {
-  const sockets = boardSockets.get(boardId);
-  if (!sockets) return;
-  for (const socket of sockets) {
-    if (socket !== exclude) {
-      send(socket, message);
-    }
-  }
-}
 
 function userIdFrom(request: FastifyRequest): string {
   return (request.user as { sub: string }).sub;
@@ -54,33 +19,6 @@ async function boardAccessGuard(
   if (!board) {
     await reply.code(404).send({ error: "not_found" });
   }
-}
-
-async function buildBoardSync(boardId: string): Promise<ServerToClientMessage> {
-  const board = await prisma.board.findUniqueOrThrow({
-    where: { id: boardId },
-    include: { columns: { orderBy: { position: "asc" } }, cards: true },
-  });
-
-  return {
-    type: "board:sync",
-    board: { id: board.id, name: board.name, ownerId: board.ownerId },
-    columns: board.columns.map((column) => ({
-      id: column.id,
-      boardId: column.boardId,
-      name: column.name,
-      position: column.position,
-    })),
-    cards: board.cards.map((card) => ({
-      id: card.id,
-      boardId: card.boardId,
-      columnId: card.columnId,
-      title: card.title,
-      description: card.description ?? undefined,
-      position: card.position,
-      version: card.version,
-    })),
-  };
 }
 
 export const realtimeRoutes = fp(async (app: FastifyInstance) => {
@@ -125,7 +63,7 @@ export const realtimeRoutes = fp(async (app: FastifyInstance) => {
               return;
             }
 
-            broadcast(boardId, await buildBoardSync(boardId), socket);
+            await broadcastBoardSync(boardId, socket);
           }
         })();
       });

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { prisma } from "../db/client.js";
+import { broadcastBoardSync } from "../realtime/broadcast.js";
 
 const createCardSchema = z.object({
   title: z.string().min(1),
@@ -46,6 +47,8 @@ export async function cardRoutes(app: FastifyInstance) {
         },
       });
 
+      await broadcastBoardSync(boardId);
+
       return reply.code(201).send({ card });
     },
   );
@@ -71,6 +74,8 @@ export async function cardRoutes(app: FastifyInstance) {
         data: parsed.data,
       });
 
+      await broadcastBoardSync(existing.boardId);
+
       return reply.code(200).send({ card });
     },
   );
@@ -87,6 +92,8 @@ export async function cardRoutes(app: FastifyInstance) {
       }
 
       await prisma.card.delete({ where: { id: existing.id } });
+
+      await broadcastBoardSync(existing.boardId);
 
       return reply.code(204).send();
     },

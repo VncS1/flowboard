@@ -1,6 +1,16 @@
+import type { ServerToClientMessage } from "@flowboard/shared";
 import { describe, expect, it } from "vitest";
+import type { WebSocket } from "ws";
 
 import { buildApp } from "../app.js";
+
+function nextMessage(socket: WebSocket): Promise<ServerToClientMessage> {
+  return new Promise((resolve) => {
+    socket.once("message", (data: Buffer) => {
+      resolve(JSON.parse(data.toString()) as ServerToClientMessage);
+    });
+  });
+}
 
 async function signup(app: ReturnType<typeof buildApp>, email: string) {
   const response = await app.inject({
@@ -219,6 +229,31 @@ describe("PATCH /boards/:id", () => {
 
     expect(response.statusCode).toBe(404);
 
+    await app.close();
+  });
+
+  it("broadcasts board:sync to subscribed sockets when the board is renamed via REST", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "renamebroadcast@example.com");
+    const board = await createBoard(app, owner.token, "Old Name");
+
+    const socket = await app.injectWS(`/ws/boards/${board.id}`, {
+      headers: { cookie: `token=${owner.token}` },
+    });
+
+    const synced = nextMessage(socket);
+    await app.inject({
+      method: "PATCH",
+      url: `/boards/${board.id}`,
+      cookies: { token: owner.token },
+      payload: { name: "New Name" },
+    });
+
+    const message = await synced;
+    expect(message).toMatchObject({ type: "board:sync", board: { name: "New Name" } });
+
+    socket.terminate();
     await app.close();
   });
 });

@@ -1,6 +1,16 @@
+import type { ServerToClientMessage } from "@flowboard/shared";
 import { describe, expect, it } from "vitest";
+import type { WebSocket } from "ws";
 
 import { buildApp } from "../app.js";
+
+function nextMessage(socket: WebSocket): Promise<ServerToClientMessage> {
+  return new Promise((resolve) => {
+    socket.once("message", (data: Buffer) => {
+      resolve(JSON.parse(data.toString()) as ServerToClientMessage);
+    });
+  });
+}
 
 async function signup(app: ReturnType<typeof buildApp>, email: string) {
   const response = await app.inject({
@@ -177,6 +187,92 @@ describe("DELETE /cards/:id", () => {
 
     expect(response.statusCode).toBe(404);
 
+    await app.close();
+  });
+});
+
+describe("real-time broadcast on card mutations", () => {
+  it("broadcasts board:sync to subscribed sockets when a card is created via REST", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "cardbroadcast1@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const columnId = board.columns[0]!.id;
+
+    const socket = await app.injectWS(`/ws/boards/${board.id}`, {
+      headers: { cookie: `token=${owner.token}` },
+    });
+
+    const synced = nextMessage(socket);
+    const response = await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/columns/${columnId}/cards`,
+      cookies: { token: owner.token },
+      payload: { title: "New card" },
+    });
+    const created = response.json().card as { id: string };
+
+    const message = await synced;
+    expect(message).toMatchObject({
+      type: "board:sync",
+      cards: [expect.objectContaining({ id: created.id, title: "New card" })],
+    });
+
+    socket.terminate();
+    await app.close();
+  });
+
+  it("broadcasts board:sync to subscribed sockets when a card is renamed via REST", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "cardbroadcast2@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const card = await createCard(app, owner.token, board.id, board.columns[0]!.id, "Old title");
+
+    const socket = await app.injectWS(`/ws/boards/${board.id}`, {
+      headers: { cookie: `token=${owner.token}` },
+    });
+
+    const synced = nextMessage(socket);
+    await app.inject({
+      method: "PATCH",
+      url: `/cards/${card.id}`,
+      cookies: { token: owner.token },
+      payload: { title: "New title" },
+    });
+
+    const message = await synced;
+    expect(message).toMatchObject({
+      type: "board:sync",
+      cards: [expect.objectContaining({ id: card.id, title: "New title" })],
+    });
+
+    socket.terminate();
+    await app.close();
+  });
+
+  it("broadcasts board:sync to subscribed sockets when a card is deleted via REST", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "cardbroadcast3@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const card = await createCard(app, owner.token, board.id, board.columns[0]!.id, "Doomed");
+
+    const socket = await app.injectWS(`/ws/boards/${board.id}`, {
+      headers: { cookie: `token=${owner.token}` },
+    });
+
+    const synced = nextMessage(socket);
+    await app.inject({
+      method: "DELETE",
+      url: `/cards/${card.id}`,
+      cookies: { token: owner.token },
+    });
+
+    const message = await synced;
+    expect(message).toMatchObject({ type: "board:sync", cards: [] });
+
+    socket.terminate();
     await app.close();
   });
 });

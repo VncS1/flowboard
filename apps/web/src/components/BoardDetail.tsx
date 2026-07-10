@@ -24,7 +24,12 @@ import type {
 
 import type { BoardDetail as BoardDetailData } from "@/lib/api";
 import { createCard } from "@/lib/boardActions";
-import { moveCardOptimistically, nestCardsIntoColumns, type BoardColumns } from "@/lib/boardState";
+import {
+  addCardIfAbsent,
+  moveCardOptimistically,
+  nestCardsIntoColumns,
+  type BoardColumns,
+} from "@/lib/boardState";
 import { useBoardSocket } from "@/lib/useBoardSocket";
 
 function DraggableCard({ id, title }: { id: string; title: string }) {
@@ -191,11 +196,7 @@ export function BoardDetail({ board }: { board: BoardDetailData }) {
   );
 
   const handleCardCreated = useCallback((card: Card) => {
-    setColumns((current) =>
-      current.map((column) =>
-        column.id === card.columnId ? { ...column, cards: [...column.cards, card] } : column,
-      ),
-    );
+    setColumns((current) => addCardIfAbsent(current, card));
   }, []);
 
   return (

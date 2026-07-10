@@ -1,7 +1,17 @@
+import type { ServerToClientMessage } from "@flowboard/shared";
 import { describe, expect, it } from "vitest";
+import type { WebSocket } from "ws";
 
 import { buildApp } from "../app.js";
 import { prisma } from "../db/client.js";
+
+function nextMessage(socket: WebSocket): Promise<ServerToClientMessage> {
+  return new Promise((resolve) => {
+    socket.once("message", (data: Buffer) => {
+      resolve(JSON.parse(data.toString()) as ServerToClientMessage);
+    });
+  });
+}
 
 async function signup(app: ReturnType<typeof buildApp>, email: string) {
   const response = await app.inject({
@@ -158,6 +168,33 @@ describe("POST /boards/:id/members", () => {
 
     await app.close();
   });
+
+  it("broadcasts board:sync to subscribed sockets when a member is invited", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "invite-broadcast-owner@example.com");
+    const invitee = await signup(app, "invite-broadcast-invitee@example.com");
+    const board = await createBoard(app, owner.token, "Broadcast Board");
+
+    const socket = await app.injectWS(`/ws/boards/${board.id}`, {
+      headers: { cookie: `token=${owner.token}` },
+    });
+
+    const synced = nextMessage(socket);
+    await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/members`,
+      cookies: { token: owner.token },
+      payload: { email: "invite-broadcast-invitee@example.com" },
+    });
+
+    const message = await synced;
+    expect(message).toMatchObject({ type: "board:sync" });
+    void invitee;
+
+    socket.terminate();
+    await app.close();
+  });
 });
 
 describe("DELETE /boards/:id/members/:userId", () => {
@@ -271,6 +308,32 @@ describe("DELETE /boards/:id/members/:userId", () => {
     });
     expect(removeSelf.statusCode).toBe(403);
 
+    await app.close();
+  });
+
+  it("broadcasts board:sync to subscribed sockets when a member is removed", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "remove-broadcast-owner@example.com");
+    const member = await signup(app, "remove-broadcast-member@example.com");
+    const board = await createBoard(app, owner.token, "Remove Broadcast Board");
+    await inviteMember(app, owner.token, board.id, "remove-broadcast-member@example.com");
+
+    const socket = await app.injectWS(`/ws/boards/${board.id}`, {
+      headers: { cookie: `token=${owner.token}` },
+    });
+
+    const synced = nextMessage(socket);
+    await app.inject({
+      method: "DELETE",
+      url: `/boards/${board.id}/members/${member.userId}`,
+      cookies: { token: owner.token },
+    });
+
+    const message = await synced;
+    expect(message).toMatchObject({ type: "board:sync" });
+
+    socket.terminate();
     await app.close();
   });
 });

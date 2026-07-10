@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { moveCardOptimistically, nestCardsIntoColumns } from "./boardState";
+import { addCardIfAbsent, moveCardOptimistically, nestCardsIntoColumns } from "./boardState";
 
 describe("nestCardsIntoColumns", () => {
   it("nests each card under its column, columns and cards ordered by position", () => {
@@ -101,6 +101,54 @@ describe("moveCardOptimistically", () => {
       toColumnId: "c2",
       toPosition: 0,
     });
+
+    expect(result).toBe(columns);
+  });
+});
+
+describe("addCardIfAbsent", () => {
+  const columns = [
+    {
+      id: "c1",
+      boardId: "b",
+      name: "Todo",
+      position: 0,
+      cards: [
+        { id: "card1", boardId: "b", columnId: "c1", title: "Card", position: 0, version: 1 },
+      ],
+    },
+    { id: "c2", boardId: "b", name: "Done", position: 1, cards: [] },
+  ];
+
+  it("appends the card to its column when not already present", () => {
+    const newCard = {
+      id: "card2",
+      boardId: "b",
+      columnId: "c1",
+      title: "New",
+      position: 1,
+      version: 1,
+    };
+
+    const result = addCardIfAbsent(columns, newCard);
+
+    expect(result.find((column) => column.id === "c1")!.cards.map((card) => card.id)).toEqual([
+      "card1",
+      "card2",
+    ]);
+  });
+
+  it("is a no-op when a card with the same id is already present, e.g. delivered early via board:sync", () => {
+    const alreadySynced = {
+      id: "card1",
+      boardId: "b",
+      columnId: "c1",
+      title: "Card",
+      position: 0,
+      version: 1,
+    };
+
+    const result = addCardIfAbsent(columns, alreadySynced);
 
     expect(result).toBe(columns);
   });
