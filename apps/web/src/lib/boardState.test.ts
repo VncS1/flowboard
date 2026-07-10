@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { addCardIfAbsent, moveCardOptimistically, nestCardsIntoColumns } from "./boardState";
+import {
+  addCardIfAbsent,
+  moveCardOptimistically,
+  nestCardsIntoColumns,
+  removeCardIfPresent,
+  updateCardIfPresent,
+} from "./boardState";
 
 describe("nestCardsIntoColumns", () => {
   it("nests each card under its column, columns and cards ordered by position", () => {
@@ -149,6 +155,76 @@ describe("addCardIfAbsent", () => {
     };
 
     const result = addCardIfAbsent(columns, alreadySynced);
+
+    expect(result).toBe(columns);
+  });
+});
+
+describe("updateCardIfPresent", () => {
+  const columns = [
+    {
+      id: "c1",
+      boardId: "b",
+      name: "Todo",
+      position: 0,
+      cards: [
+        { id: "card1", boardId: "b", columnId: "c1", title: "Card", position: 0, version: 1 },
+      ],
+    },
+    { id: "c2", boardId: "b", name: "Done", position: 1, cards: [] },
+  ];
+
+  it("replaces the card's fields in place when present", () => {
+    const updated = {
+      id: "card1",
+      boardId: "b",
+      columnId: "c1",
+      title: "Updated title",
+      position: 0,
+      version: 2,
+    };
+
+    const result = updateCardIfPresent(columns, updated);
+
+    expect(result.find((column) => column.id === "c1")!.cards).toEqual([updated]);
+  });
+
+  it("is a no-op when no card with that id exists, e.g. already removed by an earlier board:sync", () => {
+    const result = updateCardIfPresent(columns, {
+      id: "missing",
+      boardId: "b",
+      columnId: "c1",
+      title: "Ghost",
+      position: 0,
+      version: 1,
+    });
+
+    expect(result).toBe(columns);
+  });
+});
+
+describe("removeCardIfPresent", () => {
+  const columns = [
+    {
+      id: "c1",
+      boardId: "b",
+      name: "Todo",
+      position: 0,
+      cards: [
+        { id: "card1", boardId: "b", columnId: "c1", title: "Card", position: 0, version: 1 },
+      ],
+    },
+    { id: "c2", boardId: "b", name: "Done", position: 1, cards: [] },
+  ];
+
+  it("removes the card from its column when present", () => {
+    const result = removeCardIfPresent(columns, "card1");
+
+    expect(result.find((column) => column.id === "c1")!.cards).toEqual([]);
+  });
+
+  it("is a no-op when no card with that id exists, e.g. already removed by an earlier board:sync", () => {
+    const result = removeCardIfPresent(columns, "missing");
 
     expect(result).toBe(columns);
   });

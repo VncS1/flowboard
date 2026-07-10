@@ -35,6 +35,29 @@ export function addCardIfAbsent(columns: BoardColumns, card: Card): BoardColumns
   );
 }
 
+/** Replaces the card's fields in place when present; a no-op otherwise (an
+ * earlier board:sync's card:delete may have already removed it). Idempotent
+ * against the same board:sync race that motivates addCardIfAbsent. */
+export function updateCardIfPresent(columns: BoardColumns, card: Card): BoardColumns {
+  if (!findCard(columns, card.id)) return columns;
+
+  return columns.map((column) => ({
+    ...column,
+    cards: column.cards.map((c) => (c.id === card.id ? card : c)),
+  }));
+}
+
+/** Removes the card by id when present; a no-op otherwise (an earlier
+ * board:sync may have already removed it). */
+export function removeCardIfPresent(columns: BoardColumns, cardId: string): BoardColumns {
+  if (!findCard(columns, cardId)) return columns;
+
+  return columns.map((column) => ({
+    ...column,
+    cards: column.cards.filter((c) => c.id !== cardId),
+  }));
+}
+
 export function moveCardOptimistically(
   columns: BoardColumns,
   input: { cardId: string; toColumnId: string; toPosition: number },

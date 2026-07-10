@@ -35,6 +35,20 @@ async function createBoard(app: ReturnType<typeof buildApp>, token: string, name
   };
 }
 
+async function inviteMember(
+  app: ReturnType<typeof buildApp>,
+  ownerToken: string,
+  boardId: string,
+  email: string,
+) {
+  await app.inject({
+    method: "POST",
+    url: `/boards/${boardId}/members`,
+    cookies: { token: ownerToken },
+    payload: { email },
+  });
+}
+
 describe("POST /boards/:boardId/columns/:columnId/cards", () => {
   it("requires authentication", async () => {
     const app = buildApp();
@@ -96,6 +110,26 @@ describe("POST /boards/:boardId/columns/:columnId/cards", () => {
 
     await app.close();
   });
+
+  it("lets an invited member create a card", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner8@example.com");
+    const member = await signup(app, "cardmember1@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    await inviteMember(app, owner.token, board.id, "cardmember1@example.com");
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/columns/${board.columns[0]!.id}/cards`,
+      cookies: { token: member.token },
+      payload: { title: "Member card" },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().card).toMatchObject({ title: "Member card" });
+
+    await app.close();
+  });
 });
 
 async function createCard(
@@ -152,6 +186,27 @@ describe("PATCH /cards/:id", () => {
 
     await app.close();
   });
+
+  it("lets an invited member rename a card", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner9@example.com");
+    const member = await signup(app, "cardmember2@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    await inviteMember(app, owner.token, board.id, "cardmember2@example.com");
+    const card = await createCard(app, owner.token, board.id, board.columns[0]!.id, "Old title");
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/cards/${card.id}`,
+      cookies: { token: member.token },
+      payload: { title: "Renamed by member" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().card).toMatchObject({ title: "Renamed by member" });
+
+    await app.close();
+  });
 });
 
 describe("DELETE /cards/:id", () => {
@@ -186,6 +241,25 @@ describe("DELETE /cards/:id", () => {
     });
 
     expect(response.statusCode).toBe(404);
+
+    await app.close();
+  });
+
+  it("lets an invited member delete a card", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "cardowner10@example.com");
+    const member = await signup(app, "cardmember3@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    await inviteMember(app, owner.token, board.id, "cardmember3@example.com");
+    const card = await createCard(app, owner.token, board.id, board.columns[0]!.id, "Doomed");
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: `/cards/${card.id}`,
+      cookies: { token: member.token },
+    });
+
+    expect(response.statusCode).toBe(204);
 
     await app.close();
   });

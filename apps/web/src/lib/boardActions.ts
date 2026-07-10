@@ -9,6 +9,7 @@ export type CreateCardResult = { status: "ok"; card: Card } | { status: "error";
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_body: "Please check the information you entered.",
   not_found: "This column no longer exists. Please refresh and try again.",
+  owner_only: "Only the board owner can do this.",
 };
 
 async function messageForResponse(response: Response, fallback: string): Promise<string> {
@@ -45,6 +46,49 @@ async function postJson<T>(
   return { status: "ok", value: extract(await response.json()) };
 }
 
+async function patchJson<T>(
+  path: string,
+  payload: unknown,
+  fallbackMessage: string,
+  extract: (body: unknown) => T,
+): Promise<{ status: "ok"; value: T } | { status: "error"; message: string }> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return { status: "error", message: "Could not reach the server. Please try again." };
+  }
+
+  if (!response.ok) {
+    return { status: "error", message: await messageForResponse(response, fallbackMessage) };
+  }
+
+  return { status: "ok", value: extract(await response.json()) };
+}
+
+async function deleteRequest(
+  path: string,
+  fallbackMessage: string,
+): Promise<{ status: "ok" } | { status: "error"; message: string }> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { method: "DELETE", credentials: "include" });
+  } catch {
+    return { status: "error", message: "Could not reach the server. Please try again." };
+  }
+
+  if (!response.ok) {
+    return { status: "error", message: await messageForResponse(response, fallbackMessage) };
+  }
+
+  return { status: "ok" };
+}
+
 export async function createBoard(name: string): Promise<CreateBoardResult> {
   const result = await postJson(
     "/boards",
@@ -67,4 +111,40 @@ export async function createCard(
     (body) => (body as { card: Card }).card,
   );
   return result.status === "ok" ? { status: "ok", card: result.value } : result;
+}
+
+export type RenameBoardResult =
+  { status: "ok"; board: Board } | { status: "error"; message: string };
+export type UpdateCardResult = { status: "ok"; card: Card } | { status: "error"; message: string };
+export type DeleteResult = { status: "ok" } | { status: "error"; message: string };
+
+export async function renameBoard(boardId: string, name: string): Promise<RenameBoardResult> {
+  const result = await patchJson(
+    `/boards/${boardId}`,
+    { name },
+    "Could not rename the board. Please try again.",
+    (body) => (body as { board: Board }).board,
+  );
+  return result.status === "ok" ? { status: "ok", board: result.value } : result;
+}
+
+export async function deleteBoard(boardId: string): Promise<DeleteResult> {
+  return deleteRequest(`/boards/${boardId}`, "Could not delete the board. Please try again.");
+}
+
+export async function updateCard(
+  cardId: string,
+  changes: { title?: string; description?: string },
+): Promise<UpdateCardResult> {
+  const result = await patchJson(
+    `/cards/${cardId}`,
+    changes,
+    "Could not update the card. Please try again.",
+    (body) => (body as { card: Card }).card,
+  );
+  return result.status === "ok" ? { status: "ok", card: result.value } : result;
+}
+
+export async function deleteCard(cardId: string): Promise<DeleteResult> {
+  return deleteRequest(`/cards/${cardId}`, "Could not delete the card. Please try again.");
 }

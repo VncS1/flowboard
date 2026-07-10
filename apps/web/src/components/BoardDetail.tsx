@@ -23,20 +23,119 @@ import type {
 } from "@flowboard/shared";
 
 import type { BoardDetail as BoardDetailData } from "@/lib/api";
-import { createCard } from "@/lib/boardActions";
+import { createCard, deleteBoard, deleteCard, renameBoard, updateCard } from "@/lib/boardActions";
 import {
   addCardIfAbsent,
   moveCardOptimistically,
   nestCardsIntoColumns,
+  removeCardIfPresent,
+  updateCardIfPresent,
   type BoardColumns,
 } from "@/lib/boardState";
 import { useBoardSocket } from "@/lib/useBoardSocket";
 
-function DraggableCard({ id, title }: { id: string; title: string }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+function CardEditForm({
+  card,
+  onSaved,
+  onCancel,
+}: {
+  card: Card;
+  onSaved: (card: Card) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState(card.title);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    const result = await updateCard(card.id, { title });
+
+    setSubmitting(false);
+
+    if (result.status === "error") {
+      setError(result.message);
+      return;
+    }
+
+    onSaved(result.card);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+      <label htmlFor={`edit-card-${card.id}`} className="sr-only">
+        Card title
+      </label>
+      <input
+        id={`edit-card-${card.id}`}
+        type="text"
+        required
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        className="border-border bg-bg text-ink rounded-md border px-2 py-1 text-sm"
+      />
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="border-border hover:bg-surface text-ink rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50"
+        >
+          {submitting ? "Saving…" : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-muted hover:text-ink px-2 py-1 text-xs"
+        >
+          Cancel
+        </button>
+      </div>
+      {error ? (
+        <p role="alert" className="text-danger text-sm">
+          {error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+function CardItem({
+  card,
+  onUpdated,
+  onDeleted,
+}: {
+  card: Card;
+  onUpdated: (card: Card) => void;
+  onDeleted: (cardId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: card.id,
+  });
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
+  const [mode, setMode] = useState<"view" | "edit" | "confirmDelete">("view");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleConfirmDelete() {
+    setError(null);
+    setSubmitting(true);
+
+    const result = await deleteCard(card.id);
+
+    setSubmitting(false);
+
+    if (result.status === "error") {
+      setError(result.message);
+      return;
+    }
+
+    onDeleted(card.id);
+  }
 
   return (
     <li
@@ -45,10 +144,66 @@ function DraggableCard({ id, title }: { id: string; title: string }) {
       className={`bg-bg border-border rounded-md border px-3 py-2 text-sm ${
         isDragging ? "opacity-50" : ""
       }`}
-      {...attributes}
-      {...listeners}
     >
-      {title}
+      {mode === "edit" ? (
+        <CardEditForm
+          card={card}
+          onSaved={(updated) => {
+            onUpdated(updated);
+            setMode("view");
+          }}
+          onCancel={() => setMode("view")}
+        />
+      ) : (
+        <div className="flex items-start justify-between gap-2">
+          <span {...attributes} {...listeners} className="flex-1 cursor-grab">
+            {card.title}
+          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            {mode === "confirmDelete" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={submitting}
+                  className="text-danger text-xs font-medium disabled:opacity-50"
+                >
+                  {submitting ? "Deleting…" : "Confirm delete"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("view")}
+                  className="text-muted hover:text-ink text-xs"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setMode("edit")}
+                  className="text-muted hover:text-ink text-xs"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("confirmDelete")}
+                  className="text-danger text-xs"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {error ? (
+        <p role="alert" className="text-danger text-sm">
+          {error}
+        </p>
+      ) : null}
     </li>
   );
 }
@@ -138,13 +293,170 @@ function NewCardForm({
   );
 }
 
-export function BoardDetail({ board }: { board: BoardDetailData }) {
+function BoardNameControls({
+  boardId,
+  name,
+  onRenamed,
+}: {
+  boardId: string;
+  name: string;
+  onRenamed: (name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setValue(name);
+          setError(null);
+          setEditing(true);
+        }}
+        className="text-muted hover:text-ink text-xs"
+      >
+        Rename
+      </button>
+    );
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    const result = await renameBoard(boardId, value);
+
+    setSubmitting(false);
+
+    if (result.status === "error") {
+      setError(result.message);
+      return;
+    }
+
+    onRenamed(result.board.name);
+    setEditing(false);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      <label htmlFor="board-name-input" className="sr-only">
+        Board name
+      </label>
+      <input
+        id="board-name-input"
+        type="text"
+        required
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        className="border-border bg-bg text-ink rounded-md border px-2 py-1 text-sm"
+      />
+      <button
+        type="submit"
+        disabled={submitting}
+        className="border-border hover:bg-surface text-ink rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50"
+      >
+        {submitting ? "Saving…" : "Save"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(false)}
+        className="text-muted hover:text-ink text-xs"
+      >
+        Cancel
+      </button>
+      {error ? (
+        <p role="alert" className="text-danger text-sm">
+          {error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+function DeleteBoardControls({ boardId }: { boardId: string }) {
   const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleConfirmDelete() {
+    setError(null);
+    setSubmitting(true);
+
+    const result = await deleteBoard(boardId);
+
+    setSubmitting(false);
+
+    if (result.status === "error") {
+      setError(result.message);
+      return;
+    }
+
+    router.push("/boards");
+    router.refresh();
+  }
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setError(null);
+          setConfirming(true);
+        }}
+        className="text-danger text-xs"
+      >
+        Delete board
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleConfirmDelete}
+        disabled={submitting}
+        className="text-danger text-xs font-medium disabled:opacity-50"
+      >
+        {submitting ? "Deleting…" : "Confirm delete"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setConfirming(false)}
+        className="text-muted hover:text-ink text-xs"
+      >
+        Cancel
+      </button>
+      {error ? (
+        <p role="alert" className="text-danger text-sm">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function BoardDetail({
+  board,
+  currentUserId,
+}: {
+  board: BoardDetailData;
+  currentUserId?: string;
+}) {
+  const router = useRouter();
+  const [name, setName] = useState(board.name);
   const [columns, setColumns] = useState<BoardColumns>(board.columns);
   const pendingSnapshots = useRef(new Map<string, BoardColumns>());
+  const isOwner = currentUserId === board.ownerId;
 
   const handleSync = useCallback((message: BoardSyncMessage) => {
     pendingSnapshots.current.clear();
+    setName(message.board.name);
     setColumns(nestCardsIntoColumns(message.columns, message.cards));
   }, []);
 
@@ -199,9 +511,25 @@ export function BoardDetail({ board }: { board: BoardDetailData }) {
     setColumns((current) => addCardIfAbsent(current, card));
   }, []);
 
+  const handleCardUpdated = useCallback((card: Card) => {
+    setColumns((current) => updateCardIfPresent(current, card));
+  }, []);
+
+  const handleCardDeleted = useCallback((cardId: string) => {
+    setColumns((current) => removeCardIfPresent(current, cardId));
+  }, []);
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold tracking-tight">{board.name}</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-xl font-semibold tracking-tight">{name}</h1>
+        {isOwner ? (
+          <>
+            <BoardNameControls boardId={board.id} name={name} onRenamed={setName} />
+            <DeleteBoardControls boardId={board.id} />
+          </>
+        ) : null}
+      </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex flex-wrap items-start gap-4">
           {columns.map((column) => (
@@ -211,7 +539,12 @@ export function BoardDetail({ board }: { board: BoardDetailData }) {
               ) : (
                 <ul className="flex flex-col gap-2">
                   {column.cards.map((card) => (
-                    <DraggableCard key={card.id} id={card.id} title={card.title} />
+                    <CardItem
+                      key={card.id}
+                      card={card}
+                      onUpdated={handleCardUpdated}
+                      onDeleted={handleCardDeleted}
+                    />
                   ))}
                 </ul>
               )}

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { prisma } from "../db/client.js";
+import { findAccessibleBoard } from "../lib/boardAccess.js";
 import { broadcastBoardSync } from "../realtime/broadcast.js";
 
 const createCardSchema = z.object({
@@ -29,8 +30,12 @@ export async function cardRoutes(app: FastifyInstance) {
       }
 
       const { boardId, columnId } = request.params;
+      const accessible = await findAccessibleBoard(userIdFrom(request), boardId);
+      if (!accessible) {
+        return reply.code(404).send({ error: "not_found" });
+      }
       const column = await prisma.column.findFirst({
-        where: { id: columnId, boardId, board: { ownerId: userIdFrom(request) } },
+        where: { id: columnId, boardId },
       });
       if (!column) {
         return reply.code(404).send({ error: "not_found" });
@@ -62,10 +67,8 @@ export async function cardRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "invalid_body", issues: parsed.error.issues });
       }
 
-      const existing = await prisma.card.findFirst({
-        where: { id: request.params.id, board: { ownerId: userIdFrom(request) } },
-      });
-      if (!existing) {
+      const existing = await prisma.card.findFirst({ where: { id: request.params.id } });
+      if (!existing || !(await findAccessibleBoard(userIdFrom(request), existing.boardId))) {
         return reply.code(404).send({ error: "not_found" });
       }
 
@@ -84,10 +87,8 @@ export async function cardRoutes(app: FastifyInstance) {
     "/cards/:id",
     { preHandler: app.authenticate },
     async (request, reply) => {
-      const existing = await prisma.card.findFirst({
-        where: { id: request.params.id, board: { ownerId: userIdFrom(request) } },
-      });
-      if (!existing) {
+      const existing = await prisma.card.findFirst({ where: { id: request.params.id } });
+      if (!existing || !(await findAccessibleBoard(userIdFrom(request), existing.boardId))) {
         return reply.code(404).send({ error: "not_found" });
       }
 

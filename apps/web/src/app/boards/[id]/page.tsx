@@ -35,7 +35,10 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
         <Header user={userResult.user} boardName={result.board.name} />
       ) : null}
       <main className="mx-auto max-w-4xl px-6 py-16">
-        <BoardDetail board={result.board} />
+        <BoardDetail
+          board={result.board}
+          currentUserId={userResult.status === "ok" ? userResult.user.id : undefined}
+        />
       </main>
     </>
   );

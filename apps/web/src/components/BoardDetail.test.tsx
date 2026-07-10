@@ -6,8 +6,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeWebSocket } from "@/lib/testUtils/fakeWebSocket";
 
 const mockCreateCard = vi.fn();
+const mockRenameBoard = vi.fn();
+const mockDeleteBoard = vi.fn();
+const mockUpdateCard = vi.fn();
+const mockDeleteCard = vi.fn();
 vi.mock("@/lib/boardActions", () => ({
   createCard: (...args: unknown[]) => mockCreateCard(...args),
+  renameBoard: (...args: unknown[]) => mockRenameBoard(...args),
+  deleteBoard: (...args: unknown[]) => mockDeleteBoard(...args),
+  updateCard: (...args: unknown[]) => mockUpdateCard(...args),
+  deleteCard: (...args: unknown[]) => mockDeleteCard(...args),
 }));
 
 const { capturedHandlers } = vi.hoisted(() => ({
@@ -40,8 +48,9 @@ vi.mock("@dnd-kit/core", async (importOriginal) => {
 });
 
 const mockRefresh = vi.fn();
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: mockRefresh }),
+  useRouter: () => ({ refresh: mockRefresh, push: mockPush }),
 }));
 
 import { BoardDetail } from "./BoardDetail";
@@ -88,7 +97,12 @@ const board = {
 describe("BoardDetail", () => {
   beforeEach(() => {
     mockRefresh.mockClear();
+    mockPush.mockClear();
     mockCreateCard.mockReset();
+    mockRenameBoard.mockReset();
+    mockDeleteBoard.mockReset();
+    mockUpdateCard.mockReset();
+    mockDeleteCard.mockReset();
     capturedHandlers.onDragEnd = undefined;
   });
 
@@ -288,5 +302,176 @@ describe("BoardDetail", () => {
     expect(await within(doneColumn).findByRole("alert")).toHaveTextContent(
       "Could not create the card. Please try again.",
     );
+  });
+
+  describe("board rename (owner only)", () => {
+    it("shows a rename control for the board owner", () => {
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      expect(screen.getByRole("button", { name: /rename/i })).toBeInTheDocument();
+    });
+
+    it("hides the rename control for a non-owner member", () => {
+      render(<BoardDetail board={board} currentUserId="u2" />);
+
+      expect(screen.queryByRole("button", { name: /rename/i })).not.toBeInTheDocument();
+    });
+
+    it("renames the board on submit and reflects the new name immediately", async () => {
+      mockRenameBoard.mockResolvedValue({
+        status: "ok",
+        board: { id: "1", name: "Renamed Board", ownerId: "u1" },
+      });
+      const user = userEvent.setup();
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      await user.click(screen.getByRole("button", { name: /rename/i }));
+      const input = screen.getByLabelText(/board name/i);
+      await user.clear(input);
+      await user.type(input, "Renamed Board");
+      await user.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(mockRenameBoard).toHaveBeenCalledWith("1", "Renamed Board"));
+      expect(screen.getByRole("heading", { level: 1, name: /renamed board/i })).toBeInTheDocument();
+    });
+
+    it("shows a clear error message when renaming fails", async () => {
+      mockRenameBoard.mockResolvedValue({
+        status: "error",
+        message: "Could not rename the board. Please try again.",
+      });
+      const user = userEvent.setup();
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      await user.click(screen.getByRole("button", { name: /rename/i }));
+      await user.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Could not rename the board. Please try again.",
+      );
+    });
+  });
+
+  describe("board delete (owner only)", () => {
+    it("shows a delete control for the board owner", () => {
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      expect(screen.getByRole("button", { name: /delete board/i })).toBeInTheDocument();
+    });
+
+    it("hides the delete control for a non-owner member", () => {
+      render(<BoardDetail board={board} currentUserId="u2" />);
+
+      expect(screen.queryByRole("button", { name: /delete board/i })).not.toBeInTheDocument();
+    });
+
+    it("requires confirmation before deleting, then redirects to the board list", async () => {
+      mockDeleteBoard.mockResolvedValue({ status: "ok" });
+      const user = userEvent.setup();
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      await user.click(screen.getByRole("button", { name: /delete board/i }));
+      expect(mockDeleteBoard).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: /confirm delete/i }));
+
+      await waitFor(() => expect(mockDeleteBoard).toHaveBeenCalledWith("1"));
+      expect(mockPush).toHaveBeenCalledWith("/boards");
+    });
+
+    it("cancels the delete confirmation without calling deleteBoard", async () => {
+      const user = userEvent.setup();
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      await user.click(screen.getByRole("button", { name: /delete board/i }));
+      await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+      expect(screen.queryByRole("button", { name: /confirm delete/i })).not.toBeInTheDocument();
+      expect(mockDeleteBoard).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("card edit", () => {
+    it("edits a card's title on submit and reflects it immediately", async () => {
+      mockUpdateCard.mockResolvedValue({
+        status: "ok",
+        card: {
+          id: "card1",
+          boardId: "1",
+          columnId: "c1",
+          title: "Write more tests",
+          position: 0,
+          version: 2,
+        },
+      });
+      const user = userEvent.setup();
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      const todoColumn = screen.getByRole("heading", { name: /todo/i }).closest("section")!;
+      await user.click(within(todoColumn).getAllByRole("button", { name: /^edit$/i })[0]!);
+      const input = within(todoColumn).getByDisplayValue("Write tests");
+      await user.clear(input);
+      await user.type(input, "Write more tests");
+      await user.click(within(todoColumn).getByRole("button", { name: /^save$/i }));
+
+      await waitFor(() =>
+        expect(mockUpdateCard).toHaveBeenCalledWith("card1", { title: "Write more tests" }),
+      );
+      expect(within(todoColumn).getByText("Write more tests")).toBeInTheDocument();
+    });
+
+    it("shows a clear error message when editing fails", async () => {
+      mockUpdateCard.mockResolvedValue({
+        status: "error",
+        message: "Could not update the card. Please try again.",
+      });
+      const user = userEvent.setup();
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      const todoColumn = screen.getByRole("heading", { name: /todo/i }).closest("section")!;
+      await user.click(within(todoColumn).getAllByRole("button", { name: /^edit$/i })[0]!);
+      await user.click(within(todoColumn).getByRole("button", { name: /^save$/i }));
+
+      expect(await within(todoColumn).findByRole("alert")).toHaveTextContent(
+        "Could not update the card. Please try again.",
+      );
+    });
+  });
+
+  describe("card delete", () => {
+    it("requires confirmation before deleting, then removes the card", async () => {
+      mockDeleteCard.mockResolvedValue({ status: "ok" });
+      const user = userEvent.setup();
+      render(<BoardDetail board={board} currentUserId="u1" />);
+
+      const todoColumn = screen.getByRole("heading", { name: /todo/i }).closest("section")!;
+      await user.click(within(todoColumn).getAllByRole("button", { name: /^delete$/i })[0]!);
+      expect(mockDeleteCard).not.toHaveBeenCalled();
+
+      await user.click(within(todoColumn).getByRole("button", { name: /confirm delete/i }));
+
+      await waitFor(() => expect(mockDeleteCard).toHaveBeenCalledWith("card1"));
+      expect(within(todoColumn).queryByText("Write tests")).not.toBeInTheDocument();
+    });
+  });
+
+  it("applies a board rename from another client's board:sync event live", () => {
+    render(<BoardDetail board={board} currentUserId="u1" />);
+
+    act(() => {
+      FakeWebSocket.latest().emitMessage({
+        type: "board:sync",
+        board: { id: "1", name: "Renamed Elsewhere", ownerId: "u1" },
+        columns: [
+          { id: "c1", boardId: "1", name: "Todo", position: 0 },
+          { id: "c2", boardId: "1", name: "Done", position: 1 },
+        ],
+        cards: board.columns[0]!.cards,
+      });
+    });
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: /renamed elsewhere/i }),
+    ).toBeInTheDocument();
   });
 });
