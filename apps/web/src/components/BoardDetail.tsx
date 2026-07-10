@@ -23,6 +23,7 @@ import type {
 } from "@flowboard/shared";
 
 import { MemberList } from "@/components/MemberList";
+import { PencilIcon, TrashIcon } from "@/components/icons";
 import type { BoardDetail as BoardDetailData } from "@/lib/api";
 import { createCard, deleteBoard, deleteCard, renameBoard, updateCard } from "@/lib/boardActions";
 import {
@@ -142,8 +143,8 @@ function CardItem({
     <li
       ref={setNodeRef}
       style={style}
-      className={`bg-bg border-border rounded-md border px-3 py-2 text-sm ${
-        isDragging ? "opacity-50" : ""
+      className={`bg-bg border-border group rounded-lg border px-3 py-2 text-sm shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)] ${
+        isDragging ? "shadow-[var(--shadow-card-hover)] opacity-50" : ""
       }`}
     >
       {mode === "edit" ? (
@@ -160,7 +161,13 @@ function CardItem({
           <span {...attributes} {...listeners} className="flex-1 cursor-grab">
             {card.title}
           </span>
-          <div className="flex shrink-0 items-center gap-2">
+          <div
+            className={`flex shrink-0 items-center gap-2 ${
+              mode === "confirmDelete"
+                ? ""
+                : "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            }`}
+          >
             {mode === "confirmDelete" ? (
               <>
                 <button
@@ -184,16 +191,18 @@ function CardItem({
                 <button
                   type="button"
                   onClick={() => setMode("edit")}
-                  className="text-muted hover:text-ink text-xs"
+                  aria-label="Edit"
+                  className="text-muted hover:text-ink rounded p-1"
                 >
-                  Edit
+                  <PencilIcon className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setMode("confirmDelete")}
-                  className="text-danger text-xs"
+                  aria-label="Delete"
+                  className="text-danger rounded p-1"
                 >
-                  Delete
+                  <TrashIcon className="h-3.5 w-3.5" />
                 </button>
               </>
             )}
@@ -209,25 +218,37 @@ function CardItem({
   );
 }
 
+const COLUMN_DOT_CLASSES = ["bg-primary", "bg-accent-2", "bg-accent-3"];
+
 function DroppableColumn({
   id,
   name,
+  position,
   children,
 }: {
   id: string;
   name: string;
+  position: number;
   children: ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const dotClass = COLUMN_DOT_CLASSES[position % COLUMN_DOT_CLASSES.length];
 
   return (
     <section
       ref={setNodeRef}
-      className={`bg-surface w-72 shrink-0 rounded-md border p-4 ${
+      className={`bg-surface w-72 shrink-0 rounded-xl border p-4 shadow-[var(--shadow-card)] ${
         isOver ? "border-primary" : "border-border"
       }`}
     >
-      <h2 className="mb-3 text-sm font-medium">{name}</h2>
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-medium">
+        <span
+          data-column-dot
+          aria-hidden="true"
+          className={`h-1.5 w-1.5 rounded-full ${dotClass}`}
+        />
+        {name}
+      </h2>
       {children}
     </section>
   );
@@ -317,9 +338,10 @@ function BoardNameControls({
           setError(null);
           setEditing(true);
         }}
-        className="text-muted hover:text-ink text-xs"
+        aria-label="Rename"
+        className="text-muted hover:text-ink rounded p-1"
       >
-        Rename
+        <PencilIcon className="h-4 w-4" />
       </button>
     );
   }
@@ -409,9 +431,10 @@ function DeleteBoardControls({ boardId }: { boardId: string }) {
           setError(null);
           setConfirming(true);
         }}
-        className="text-danger text-xs"
+        aria-label="Delete board"
+        className="text-danger rounded p-1"
       >
-        Delete board
+        <TrashIcon className="h-4 w-4" />
       </button>
     );
   }
@@ -542,7 +565,12 @@ export function BoardDetail({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex flex-wrap items-start gap-4">
           {columns.map((column) => (
-            <DroppableColumn key={column.id} id={column.id} name={column.name}>
+            <DroppableColumn
+              key={column.id}
+              id={column.id}
+              name={column.name}
+              position={column.position}
+            >
               {column.cards.length === 0 ? (
                 <p className="text-muted text-xs">No cards</p>
               ) : (

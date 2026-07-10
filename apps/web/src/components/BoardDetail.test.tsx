@@ -487,4 +487,11 @@ describe("BoardDetail", () => {
 
     expect(screen.getByTitle("Board Owner")).toBeInTheDocument();
   });
+
+  it("shows a color indicator dot in each column header", () => {
+    render(<BoardDetail board={board} currentUserId="u1" />);
+
+    const todoHeading = screen.getByRole("heading", { name: /todo/i });
+    expect(todoHeading.querySelector("[data-column-dot]")).not.toBeNull();
+  });
 });
