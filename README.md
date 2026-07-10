@@ -30,12 +30,18 @@ See `CLAUDE.md` for full project conventions and architecture, and
 
 ## Status
 
-Phases 0–7 are done: monorepo bootstrap, the shared WebSocket message contract, the
-Postgres/Prisma schema, a Fastify REST API (auth, Board CRUD, Card CRUD), the
-WebSocket layer with optimistic-concurrency card moves, a Next.js frontend with
-real-time drag-and-drop (`@dnd-kit`, optimistic move + conflict rollback), and a full
-login/signup flow with middleware-based route protection for the board pages. E2E
-tests with Playwright (Phase 8) are next — see the roadmap for the full plan.
+Phases 0–8, 11, and 12 are done: monorepo bootstrap, the shared WebSocket message
+contract, the Postgres/Prisma schema, a Fastify REST API (auth, Board CRUD, Card
+CRUD), the WebSocket layer with optimistic-concurrency card moves, a Next.js frontend
+with real-time drag-and-drop (`@dnd-kit`, optimistic move + conflict rollback), a full
+login/signup flow with middleware-based route protection and a persistent
+authenticated header (sign-out), a Playwright E2E suite (golden path, two-browser-context
+live sync, and concurrent-move conflict handling), board membership/sharing
+(invite/remove a member by email, owner vs. member access), and REST mutations
+(card create/update/delete, board rename, member invite/remove) broadcasting live over
+the same WebSocket path as card moves. AWS infra/deployment (Phase 9), board/card
+edit/delete UI (Phase 13), and a visual redesign (Phase 14) are still ahead — see the
+roadmap for the full plan.
 
 ## Prerequisites
 
@@ -153,20 +159,23 @@ curl -b cookies.txt -X DELETE http://localhost:4000/cards/<cardId>
 Boards and cards are scoped to their owner: requests from a different authenticated user
 (or with no cookie at all) get `404`/`401` rather than someone else's data.
 
-| Route                                           | Auth required | Notes                                                 |
-| ----------------------------------------------- | ------------- | ----------------------------------------------------- |
-| `GET /health`                                   | no            | liveness check                                        |
-| `POST /auth/signup`                             | no            | bcrypt-hashed password, sets `token` cookie           |
-| `POST /auth/login`                              | no            | sets `token` cookie                                   |
-| `POST /auth/logout`                             | no            | clears the `token` cookie                             |
-| `POST /boards`                                  | yes           | creates board + default Todo/Doing/Done columns       |
-| `GET /boards`                                   | yes           | lists boards owned by the caller                      |
-| `GET /boards/:id`                               | yes           | 404 if not the owner                                  |
-| `PATCH /boards/:id`                             | yes           | rename                                                |
-| `DELETE /boards/:id`                            | yes           | cascades to its columns/cards                         |
-| `POST /boards/:boardId/columns/:columnId/cards` | yes           | appends a card to the column                          |
-| `PATCH /cards/:id`                              | yes           | rename/update description (not move — that's Phase 4) |
-| `DELETE /cards/:id`                             | yes           |                                                       |
+| Route                                           | Auth required | Notes                                                                                               |
+| ----------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------- |
+| `GET /health`                                   | no            | liveness check                                                                                      |
+| `POST /auth/signup`                             | no            | bcrypt-hashed password, sets `token` cookie                                                         |
+| `POST /auth/login`                              | no            | sets `token` cookie                                                                                 |
+| `GET /auth/me`                                  | yes           | current user, backs the authenticated header                                                        |
+| `POST /auth/logout`                             | no            | clears the `token` cookie                                                                           |
+| `POST /boards`                                  | yes           | creates board + default Todo/Doing/Done columns                                                     |
+| `GET /boards`                                   | yes           | lists boards owned by the caller                                                                    |
+| `GET /boards/:id`                               | yes           | 404 unless the caller owns the board or is an invited member                                        |
+| `PATCH /boards/:id`                             | yes           | rename (owner only); broadcasts `board:sync` live                                                   |
+| `DELETE /boards/:id`                            | yes           | cascades to its columns/cards (owner only)                                                          |
+| `POST /boards/:id/members`                      | yes           | owner invites a registered user by email; broadcasts `board:sync` live                              |
+| `DELETE /boards/:id/members/:userId`            | yes           | owner removes a member; broadcasts `board:sync` live                                                |
+| `POST /boards/:boardId/columns/:columnId/cards` | yes           | appends a card to the column; broadcasts `board:sync` live                                          |
+| `PATCH /cards/:id`                              | yes           | rename/update description (not move — that's the WS `card:move` path); broadcasts `board:sync` live |
+| `DELETE /cards/:id`                             | yes           | broadcasts `board:sync` live                                                                        |
 
 ## Testing
 
@@ -179,18 +188,23 @@ npm run format:check
 
 `apps/server`'s test command applies pending Prisma migrations to `flowboard_test`
 first, then runs Vitest integration tests against that real database (no mocking) —
-covering the Prisma schema, auth (including CORS and logout), the Board/Card REST
-routes (including cross-user authorization checks), and the WebSocket layer (handshake
-auth, broadcast, and the optimistic-concurrency conflict path for concurrent card
-moves). `packages/shared` has unit tests for every WebSocket message schema (accept +
-reject cases). `apps/web` has Vitest + React Testing Library component tests for the
-board list/detail pages (including the WebSocket-driven drag-and-drop, optimistic
-update and rollback-on-conflict paths, with the socket and `@dnd-kit` mocked) and the
-login/signup forms (mocked `fetch`), plus an integration test for `proxy.ts` covering
-missing/invalid/expired/valid session cookies.
+covering the Prisma schema, auth (including CORS and logout), the Board/Card/membership
+REST routes (including cross-user and owner-vs-member authorization checks), and the
+WebSocket layer (handshake auth, the optimistic-concurrency conflict path for
+concurrent card moves, and `board:sync` broadcasts firing for every REST mutation —
+card create/update/delete, board rename, member invite/remove). `packages/shared` has
+unit tests for every WebSocket message schema (accept + reject cases). `apps/web` has
+Vitest + React Testing Library component tests for the board list/detail pages
+(including the WebSocket-driven drag-and-drop, optimistic update and
+rollback-on-conflict paths, with the socket and `@dnd-kit` mocked), the authenticated
+header, and the login/signup forms (mocked `fetch`), plus an integration test for
+`proxy.ts` covering missing/invalid/expired/valid session cookies.
 
-Playwright E2E tests (including the two-browser-context real-time checks) land in
-Phase 8.
+Playwright E2E tests live in `e2e/` (`npx playwright test`, from that directory):
+a golden path (signup → create board → create card → drag it), two-browser-context
+live sync (one browser creates a card or moves one, the other sees it with no reload),
+and a concurrency test asserting a near-simultaneous move on the same card has no lost
+update — the loser gets a visible conflict instead of silently overwriting.
 
 ## Deploying
 
