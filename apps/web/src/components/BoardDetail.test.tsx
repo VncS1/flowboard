@@ -138,6 +138,27 @@ describe("BoardDetail", () => {
     });
   });
 
+  it("sends the incremented version for a second move of the same card in the same tab, with no server round trip in between", () => {
+    render(<BoardDetail board={board} />);
+    act(() => FakeWebSocket.latest().emitOpen());
+
+    act(() => {
+      capturedHandlers.onDragEnd?.({ active: { id: "card1" }, over: { id: "c2" } });
+    });
+    act(() => {
+      capturedHandlers.onDragEnd?.({ active: { id: "card1" }, over: { id: "c1" } });
+    });
+
+    const sent = FakeWebSocket.latest().sent;
+    expect(sent).toHaveLength(2);
+    expect(JSON.parse(sent[1])).toMatchObject({
+      type: "card:move",
+      cardId: "card1",
+      toColumnId: "c1",
+      version: 2,
+    });
+  });
+
   it("rolls back the optimistic move and refetches when the server reports a conflict", () => {
     render(<BoardDetail board={board} />);
 

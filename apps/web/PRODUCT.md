@@ -4,6 +4,10 @@
 
 product
 
+## Platform
+
+web
+
 ## Users
 
 Small teams (2-10 people) collaborating on shared task boards in real time. A user is
@@ -48,6 +52,12 @@ carried by a single deliberate accent, strong type hierarchy, no ornamental chro
 - Keyboard and screen-reader parity with mouse/drag interaction — load-bearing ahead of
   Phase 6's drag-and-drop, where a pointer-only interaction would exclude a whole class
   of users.
+- Persistent wayfinding: every authenticated screen needs a lightweight header — where
+  you are (board name / a way back to the board list), who's signed in, and a clear way
+  to sign out. A bare content area with no account context is a gap, not minimalism.
+- Every control must announce itself unambiguously on first look — a first-time user
+  should never have to guess what a button, form field, or drag target does. Density
+  and restraint (per the principles above) must not come at the cost of clarity.
 
 ## Accessibility & Inclusion
 

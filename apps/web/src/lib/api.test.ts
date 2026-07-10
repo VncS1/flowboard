@@ -105,3 +105,38 @@ describe("getBoard", () => {
     expect(result).toEqual({ status: "not-found" });
   });
 });
+
+describe("getCurrentUser", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("forwards the auth cookie and returns the signed-in user on success", async () => {
+    cookiesMock.mockResolvedValue({
+      get: (name: string) => (name === "token" ? { value: "abc" } : undefined),
+    });
+    const user = { id: "u1", email: "alice@example.com", name: "Alice" };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { user }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { getCurrentUser } = await import("./api");
+    const result = await getCurrentUser();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/auth/me"),
+      expect.objectContaining({ headers: { cookie: "token=abc" } }),
+    );
+    expect(result).toEqual({ status: "ok", user });
+  });
+
+  it("returns an unauthenticated result on a 401 response", async () => {
+    cookiesMock.mockResolvedValue({ get: () => undefined });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(401, { error: "unauthorized" })));
+
+    const { getCurrentUser } = await import("./api");
+    const result = await getCurrentUser();
+
+    expect(result).toEqual({ status: "unauthenticated" });
+  });
+});

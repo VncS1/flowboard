@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BoardDetail } from "@/components/BoardDetail";
-import { getBoard } from "@/lib/api";
+import { Header } from "@/components/Header";
+import { getBoard, getCurrentUser } from "@/lib/api";
 
 export default async function BoardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,9 +27,16 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
     );
   }
 
+  const userResult = await getCurrentUser();
+
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <BoardDetail board={result.board} />
-    </main>
+    <>
+      {userResult.status === "ok" ? (
+        <Header user={userResult.user} boardName={result.board.name} />
+      ) : null}
+      <main className="mx-auto max-w-4xl px-6 py-16">
+        <BoardDetail board={result.board} />
+      </main>
+    </>
   );
 }

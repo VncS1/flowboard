@@ -30,7 +30,12 @@ export function moveCardOptimistically(
   const card = findCard(columns, input.cardId);
   if (!card) return columns;
 
-  const movedCard: Card = { ...card, columnId: input.toColumnId, position: input.toPosition };
+  const movedCard: Card = {
+    ...card,
+    columnId: input.toColumnId,
+    position: input.toPosition,
+    version: card.version + 1,
+  };
 
   return columns.map((column) => {
     const cardsWithoutMoved = column.cards.filter((c) => c.id !== input.cardId);

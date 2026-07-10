@@ -121,6 +121,41 @@ describe("POST /auth/login", () => {
   });
 });
 
+describe("GET /auth/me", () => {
+  it("returns the signed-in user for a valid session", async () => {
+    const app = buildApp();
+    const signup = await app.inject({
+      method: "POST",
+      url: "/auth/signup",
+      payload: { email: "frank@example.com", name: "Frank", password: "correct-horse" },
+    });
+    const tokenCookie = signup.cookies.find((cookie) => cookie.name === "token");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/auth/me",
+      cookies: { token: tokenCookie!.value },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.user).toMatchObject({ email: "frank@example.com", name: "Frank" });
+    expect(body.user.passwordHash).toBeUndefined();
+
+    await app.close();
+  });
+
+  it("rejects an unauthenticated request with 401", async () => {
+    const app = buildApp();
+
+    const response = await app.inject({ method: "GET", url: "/auth/me" });
+
+    expect(response.statusCode).toBe(401);
+
+    await app.close();
+  });
+});
+
 describe("POST /auth/logout", () => {
   it("clears the auth cookie", async () => {
     const app = buildApp();

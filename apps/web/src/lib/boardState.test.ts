@@ -83,6 +83,18 @@ describe("moveCardOptimistically", () => {
     ]);
   });
 
+  it("increments the moved card's version, mirroring the server's version+1 on a successful move", () => {
+    const result = moveCardOptimistically(columns, {
+      cardId: "card1",
+      toColumnId: "c2",
+      toPosition: 0,
+    });
+
+    expect(result.find((column) => column.id === "c2")!.cards).toMatchObject([
+      { id: "card1", version: 2 },
+    ]);
+  });
+
   it("returns the original columns unchanged when the card does not exist", () => {
     const result = moveCardOptimistically(columns, {
       cardId: "missing",

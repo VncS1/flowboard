@@ -78,6 +78,16 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(200).send({ user: toPublicUser(user) });
   });
 
+  app.get("/auth/me", { preHandler: app.authenticate }, async (request, reply) => {
+    const { sub } = request.user as { sub: string };
+    const user = await prisma.user.findUnique({ where: { id: sub } });
+    if (!user) {
+      return reply.code(401).send({ error: "invalid_credentials" });
+    }
+
+    return reply.code(200).send({ user: toPublicUser(user) });
+  });
+
   app.post("/auth/logout", async (_request, reply) => {
     reply.clearCookie("token", { path: "/" });
     return reply.code(200).send({ ok: true });

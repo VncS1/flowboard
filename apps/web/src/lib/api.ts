@@ -13,6 +13,10 @@ export type BoardsResult = { status: "ok"; boards: BoardSummary[] } | { status: 
 export type BoardResult =
   { status: "ok"; board: BoardDetail } | { status: "unauthenticated" } | { status: "not-found" };
 
+export type CurrentUser = { id: string; email: string; name: string };
+
+export type CurrentUserResult = { status: "ok"; user: CurrentUser } | { status: "unauthenticated" };
+
 async function authHeaders(): Promise<Record<string, string>> {
   const store = await cookies();
   const token = store.get("token")?.value;
@@ -54,4 +58,21 @@ export async function getBoard(id: string): Promise<BoardResult> {
 
   const data = (await response.json()) as { board: BoardDetail };
   return { status: "ok", board: data.board };
+}
+
+export async function getCurrentUser(): Promise<CurrentUserResult> {
+  const response = await fetch(`${API_URL}/auth/me`, {
+    headers: await authHeaders(),
+    cache: "no-store",
+  });
+
+  if (response.status === 401) {
+    return { status: "unauthenticated" };
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to load current user: ${response.status}`);
+  }
+
+  const data = (await response.json()) as { user: CurrentUser };
+  return { status: "ok", user: data.user };
 }
