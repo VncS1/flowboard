@@ -130,6 +130,36 @@
   - [x] 12.6 Full gate: `npm run build && npm run lint && npm run format:check && npm
     test` (135 tests: 55 server + 66 web + 14 shared) `&& npx playwright test` (4/4,
     from `e2e/`) — all green.
+- [x] Phase 13 — Complete CRUD (board & card edit/delete) (done)
+  - [x] 13.1 Audit: `PATCH`/`DELETE /boards/:id` and `PATCH`/`DELETE /cards/:id` already
+    existed from Phase 3, so this phase adds no new REST routes. Found a real gap while
+    auditing: card create/update/delete checked `board: { ownerId }` directly instead of
+    `findAccessibleBoard`, so an invited member could move a card via the WS `card:move`
+    path but got a 404 trying to create/edit/delete one via REST — inconsistent with the
+    owner-OR-member model `findAccessibleBoard` already established in Phase 11. Flagged
+    to the user as a scope decision rather than guessed silently; user chose to fix it in
+    this phase.
+  - [x] 13.2 TDD fix (RED confirmed: 3 new member-access tests failing with 404, GREEN
+    after): `cards.ts` create/update/delete now use `findAccessibleBoard`, so invited
+    members can create/edit/delete cards, matching the existing WS move access. Board
+    rename/delete stays owner-only per the explicit Phase 11 decision.
+  - [x] 13.3 `boardState.ts`: added `updateCardIfPresent`/`removeCardIfPresent` (TDD),
+    idempotent no-ops when the card is already absent/updated — mirrors `addCardIfAbsent`
+    from Phase 12 so optimistic card edit/delete stays safe against the same
+    REST-response-vs-own-socket-sync race.
+  - [x] 13.4 Frontend (TDD, component tests written first): inline board rename and
+    delete-with-confirmation controls (owner-only, gated on a new `currentUserId` prop
+    passed from `BoardPage`); per-card inline edit and delete-with-confirmation controls
+    (available to owner and members). Restructured `DraggableCard` into `CardItem` with
+    the dnd-kit drag listeners scoped to the title text only (a drag handle), not the
+    whole `<li>`, so the new Edit/Delete buttons don't fight the drag sensor.
+  - [x] 13.5 `handleSync` now also applies `message.board.name`, so a board rename by any
+    client (not just the renamer) reflects live on every other subscribed client — this
+    was a latent gap since Phase 12 (the `board:sync` payload already carried `board`, but
+    the handler only read `columns`/`cards`).
+  - [x] 13.6 Full gate: `npm run build && npm run lint && npm run format:check && npm
+    test` (161 tests: 58 server + 89 web + 14 shared) `&& npx playwright test` (4/4, from
+    `e2e/`) — all green.
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
 > plan. The project spans multiple independent subsystems (monorepo scaffold, DB, REST
