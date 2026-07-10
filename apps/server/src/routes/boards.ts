@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { prisma } from "../db/client.js";
+import { findAccessibleBoard } from "../lib/boardAccess.js";
 
 const createBoardSchema = z.object({
   name: z.string().min(1),
@@ -60,8 +61,13 @@ export async function boardRoutes(app: FastifyInstance) {
     "/boards/:id",
     { preHandler: app.authenticate },
     async (request, reply) => {
-      const board = await prisma.board.findFirst({
-        where: { id: request.params.id, ownerId: userIdFrom(request) },
+      const accessible = await findAccessibleBoard(userIdFrom(request), request.params.id);
+      if (!accessible) {
+        return reply.code(404).send({ error: "not_found" });
+      }
+
+      const board = await prisma.board.findUniqueOrThrow({
+        where: { id: accessible.id },
         include: {
           columns: {
             orderBy: { position: "asc" },
@@ -69,10 +75,6 @@ export async function boardRoutes(app: FastifyInstance) {
           },
         },
       });
-
-      if (!board) {
-        return reply.code(404).send({ error: "not_found" });
-      }
 
       return reply.code(200).send({ board });
     },

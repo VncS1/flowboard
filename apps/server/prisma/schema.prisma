@@ -13,24 +13,43 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  boards       Board[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String        @id @default(uuid())
+  email            String        @unique
+  name             String
+  passwordHash     String
+  boards           Board[]
+  boardMemberships BoardMember[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }
 
 model Board {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   name      String
-  owner     User     @relation(fields: [ownerId], references: [id])
+  owner     User          @relation(fields: [ownerId], references: [id])
   ownerId   String
   columns   Column[]
   cards     Card[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  members   BoardMember[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum BoardMemberRole {
+  OWNER
+  MEMBER
+}
+
+model BoardMember {
+  id        String          @id @default(uuid())
+  board     Board           @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId   String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      BoardMemberRole
+  createdAt DateTime        @default(now())
+
+  @@unique([boardId, userId])
 }
 
 model Column {

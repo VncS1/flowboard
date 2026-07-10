@@ -5,6 +5,7 @@ import fp from "fastify-plugin";
 import type { WebSocket } from "ws";
 
 import { prisma } from "../db/client.js";
+import { findAccessibleBoard } from "../lib/boardAccess.js";
 import { moveCard } from "./moveCard.js";
 
 const boardSockets = new Map<string, Set<WebSocket>>();
@@ -49,9 +50,7 @@ async function boardAccessGuard(
   request: FastifyRequest<{ Params: { boardId: string } }>,
   reply: FastifyReply,
 ) {
-  const board = await prisma.board.findFirst({
-    where: { id: request.params.boardId, ownerId: userIdFrom(request) },
-  });
+  const board = await findAccessibleBoard(userIdFrom(request), request.params.boardId);
   if (!board) {
     await reply.code(404).send({ error: "not_found" });
   }

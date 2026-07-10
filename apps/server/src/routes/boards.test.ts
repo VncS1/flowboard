@@ -119,6 +119,31 @@ describe("GET /boards/:id", () => {
     await app.close();
   });
 
+  it("returns the board for an invited member, not just its owner", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "member-access-owner@example.com");
+    const member = await signup(app, "member-access-member@example.com");
+    const board = await createBoard(app, owner.token, "Shared Board");
+
+    await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/members`,
+      cookies: { token: owner.token },
+      payload: { email: "member-access-member@example.com" },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/boards/${board.id}`,
+      cookies: { token: member.token },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().board).toMatchObject({ name: "Shared Board" });
+
+    await app.close();
+  });
+
   it("nests each column's cards ordered by position", async () => {
     const app = buildApp();
     const owner = await signup(app, "cards-getter@example.com");
