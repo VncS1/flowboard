@@ -5,6 +5,8 @@ import { useState, type FormEvent } from "react";
 
 import { createBoard } from "@/lib/boardActions";
 
+import { PlusIcon } from "./icons";
+
 export function CreateBoardForm() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -30,7 +32,10 @@ export function CreateBoardForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-3">
+    <form
+      onSubmit={handleSubmit}
+      className="border-border bg-surface flex items-end gap-3 rounded-xl border p-5 shadow-[var(--shadow-card)]"
+    >
       <div className="flex flex-1 flex-col gap-1">
         <label htmlFor="board-name" className="text-sm font-medium">
           Board name
@@ -47,8 +52,9 @@ export function CreateBoardForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="bg-primary hover:bg-primary-hover text-on-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+        className="from-primary to-accent-2 text-on-primary flex items-center gap-1.5 rounded-full bg-gradient-to-r px-4 py-2 text-sm font-medium disabled:opacity-50"
       >
+        <PlusIcon className="h-4 w-4" />
         {submitting ? "Creating…" : "Create board"}
       </button>
       {error ? (
