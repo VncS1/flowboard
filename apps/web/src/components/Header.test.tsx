@@ -50,6 +50,12 @@ describe("Header", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
+  it("shows an avatar with the user's initials", () => {
+    render(<Header user={{ id: "u1", email: "alice@example.com", name: "Alice Smith" }} />);
+
+    expect(screen.getByTitle("Alice Smith")).toHaveTextContent("AS");
+  });
+
   it("signs out and redirects to /login on click", async () => {
     const user = userEvent.setup();
     render(<Header user={{ id: "u1", email: "alice@example.com", name: "Alice" }} />);
