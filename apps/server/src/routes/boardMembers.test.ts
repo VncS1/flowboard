@@ -80,6 +80,29 @@ describe("POST /boards/:id/members", () => {
     await app.close();
   });
 
+  it("includes the invited user's name and email in the response", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "invite-shape-owner@example.com");
+    await signup(app, "invite-shape-invitee@example.com");
+    const board = await createBoard(app, owner.token, "Team Board");
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/members`,
+      cookies: { token: owner.token },
+      payload: { email: "invite-shape-invitee@example.com" },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().member).toMatchObject({
+      name: "Test User",
+      email: "invite-shape-invitee@example.com",
+      role: "MEMBER",
+    });
+
+    await app.close();
+  });
+
   it("returns a clear error when the email doesn't match a registered user", async () => {
     const app = buildApp();
     const owner = await signup(app, "no-match-owner@example.com");

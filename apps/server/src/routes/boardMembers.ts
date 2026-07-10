@@ -50,7 +50,9 @@ export async function boardMemberRoutes(app: FastifyInstance) {
 
       await broadcastBoardSync(board.id);
 
-      return reply.code(201).send({ member });
+      return reply.code(201).send({
+        member: { ...member, name: invitee.name, email: invitee.email },
+      });
     },
   );
 
