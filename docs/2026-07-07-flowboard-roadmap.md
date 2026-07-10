@@ -160,6 +160,52 @@
   - [x] 13.6 Full gate: `npm run build && npm run lint && npm run format:check && npm
     test` (161 tests: 58 server + 89 web + 14 shared) `&& npx playwright test` (4/4, from
     `e2e/`) — all green.
+- [x] Phase 14 — Visual redesign (done, branch `polish/redesign-v2`)
+  - [x] 14.1 Brainstormed via `superpowers:brainstorming` with the visual companion
+    (mockups in-browser): the roadmap's original "bold colors, gradients, shadows —
+    modern/vibrant, not minimal" direction was shown to the user as three mockups and
+    rejected as "generic"; pivoted to a "Stripe/Vercel clean" direction instead (soft
+    ambient gradient, restrained accent color, diffused shadows) — captured in
+    `docs/superpowers/specs/2026-07-10-visual-redesign-design.md`.
+  - [x] 14.2 Scope decision: the roadmap listed "member list/invite UI" as a redesign
+    target, but it was never built on the frontend (Phase 11 was backend-only). Flagged
+    to the user rather than guessed; user chose to build it now, in the new visual
+    language, closing the Phase 11 gap end-to-end.
+  - [x] 14.3 Design tokens (`globals.css`): additive `--color-accent-2`/`--color-accent-3`,
+    `--ambient-gradient` (light-mode-only, overridden to `none` in dark), `--shadow-card`/
+    `--shadow-card-hover`.
+  - [x] 14.4 New `icons.tsx` (6 hand-rolled inline SVG icons, no new dependency) and
+    `memberColor.ts` (deterministic per-user avatar color + initials helpers), both TDD.
+  - [x] 14.5 Backend (TDD, additive only): `GET /boards/:id` now returns `members` (owner +
+    invited members with role); `POST /boards/:id/members` response additively includes
+    the invitee's name/email (existing `boardId`/`userId`/`role` fields untouched).
+  - [x] 14.6 New `MemberList` component (avatar stack, invite form, remove control,
+    owner-gated) wired into `BoardDetail`; `boardActions.inviteMember`/`removeMember`
+    added. Real-time sync of the member list is out of scope (would need a
+    `packages/shared` schema change) — it loads once per page view.
+  - [x] 14.7 Redesigned `Header` (avatar, gradient wordmark, icon sign-out), `BoardsList`/
+    `CreateBoardForm` (card grid, gradient create button), and `BoardDetail` (column
+    color-dot indicators, hover/focus-reveal icon Edit/Delete on cards, icon rename/
+    delete-board toolbar) — every existing accessible name (`Edit`, `Delete`, `Rename`,
+    `Delete board`, etc.) preserved exactly, so the whole pre-existing test suite kept
+    passing unmodified except for fixture updates (`members` field) and new tests.
+  - [x] 14.8 Found and fixed a real, pre-existing bug via manual browser verification
+    (not caught by any automated test, since `app.inject()` integration tests bypass CORS
+    entirely and no E2E spec drove rename/delete/invite/remove through a real browser):
+    `@fastify/cors` only allowed `GET`/`HEAD`/`POST`, so every `PATCH`/`DELETE` mutation
+    (board rename/delete, card edit/delete, member invite/remove — including Phase 13's
+    own features) silently failed with a CORS error in a real browser despite passing
+    every test. Fixed with an explicit `methods` list (TDD, RED confirmed via an OPTIONS
+    preflight test asserting `PATCH`/`DELETE` in `access-control-allow-methods`).
+  - [x] 14.9 Manual verification: launched both dev servers, drove the app with a
+    Playwright-scripted headless Chromium (no `chromium-cli` available in this
+    environment) — signup, create board, create/drag cards (confirms the drag handle
+    restructuring in 13.4 still works for real pointer-driven drag-and-drop), rename
+    board, invite/remove a member, all screenshotted with zero browser console errors
+    after the CORS fix.
+  - [x] 14.10 Full gate: `npm run build && npm run lint && npm run format:check && npm
+    test` (188 tests: 61 server + 113 web + 14 shared) `&& npx playwright test` (4/4,
+    from `e2e/`) — all green.
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
 > plan. The project spans multiple independent subsystems (monorepo scaffold, DB, REST
