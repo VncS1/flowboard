@@ -10,6 +10,13 @@
   --color-primary-hover: oklch(0.48 0.19 288);
   --color-on-primary: oklch(1 0 0);
   --color-danger: oklch(0.55 0.22 25);
+  --color-accent-2: oklch(0.62 0.2 340);
+  --color-accent-3: oklch(0.7 0.14 170);
+  --ambient-gradient:
+    radial-gradient(ellipse 480px 300px at 10% -10%, oklch(0.55 0.19 288 / 0.08), transparent 60%),
+    radial-gradient(ellipse 420px 260px at 100% 0%, oklch(0.62 0.2 340 / 0.06), transparent 60%);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(79, 70, 229, 0.06);
+  --shadow-card-hover: 0 4px 10px rgba(0, 0, 0, 0.06), 0 12px 28px rgba(79, 70, 229, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +29,11 @@
     --color-primary: oklch(0.6 0.18 288);
     --color-primary-hover: oklch(0.67 0.18 288);
     --color-danger: oklch(0.72 0.19 25);
+    --color-accent-2: oklch(0.68 0.19 340);
+    --color-accent-3: oklch(0.72 0.13 170);
+    --ambient-gradient: none;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-card-hover: 0 1px 3px rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -35,11 +47,15 @@
   --color-primary-hover: var(--color-primary-hover);
   --color-on-primary: var(--color-on-primary);
   --color-danger: var(--color-danger);
+  --color-accent-2: var(--color-accent-2);
+  --color-accent-3: var(--color-accent-3);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
+  background-image: var(--ambient-gradient);
   background-color: var(--color-bg);
+  background-attachment: fixed;
   color: var(--color-ink);
 }
 
