@@ -74,10 +74,35 @@ export async function boardRoutes(app: FastifyInstance) {
             orderBy: { position: "asc" },
             include: { cards: { orderBy: { position: "asc" } } },
           },
+          owner: true,
+          members: { include: { user: true } },
         },
       });
 
-      return reply.code(200).send({ board });
+      const members = [
+        {
+          id: board.owner.id,
+          name: board.owner.name,
+          email: board.owner.email,
+          role: "OWNER" as const,
+        },
+        ...board.members.map((member) => ({
+          id: member.user.id,
+          name: member.user.name,
+          email: member.user.email,
+          role: member.role,
+        })),
+      ];
+
+      return reply.code(200).send({
+        board: {
+          id: board.id,
+          name: board.name,
+          ownerId: board.ownerId,
+          columns: board.columns,
+          members,
+        },
+      });
     },
   );
 

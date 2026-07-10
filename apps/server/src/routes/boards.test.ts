@@ -154,6 +154,43 @@ describe("GET /boards/:id", () => {
     await app.close();
   });
 
+  it("includes the owner and all invited members with their role", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "members-field-owner@example.com");
+    const member = await signup(app, "members-field-member@example.com");
+    const board = await createBoard(app, owner.token, "Team Board");
+
+    await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/members`,
+      cookies: { token: owner.token },
+      payload: { email: "members-field-member@example.com" },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/boards/${board.id}`,
+      cookies: { token: owner.token },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const members = response.json().board.members;
+    expect(members).toContainEqual({
+      id: owner.userId,
+      name: "Test User",
+      email: "members-field-owner@example.com",
+      role: "OWNER",
+    });
+    expect(members).toContainEqual({
+      id: member.userId,
+      name: "Test User",
+      email: "members-field-member@example.com",
+      role: "MEMBER",
+    });
+
+    await app.close();
+  });
+
   it("nests each column's cards ordered by position", async () => {
     const app = buildApp();
     const owner = await signup(app, "cards-getter@example.com");
