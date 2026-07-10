@@ -98,7 +98,38 @@
     inviting an unregistered email or an already-invited member is rejected
   - [x] 11.6 Full gate: `npm run build && npm run lint && npm run format:check && npm
     test` — all green (127 tests: 49 server + 64 web + 14 shared)
-
+- [x] Phase 12 — Real-time broadcast completion (done, commit d106173)
+  - [x] 12.1 Extracted `boardSockets`/`broadcast`/`buildBoardSync` out of `realtime/ws.ts`
+    into a shared `realtime/broadcast.ts` (`subscribe`, `unsubscribe`,
+    `broadcastBoardSync(boardId, exclude?)`), so REST route handlers can reach the same
+    in-memory socket map `card:move` already used. Pure refactor, `ws.test.ts` stayed
+    green throughout.
+  - [x] 12.2 Wired `broadcastBoardSync` into the REST mutation handlers after each
+    successful write: card create/update/delete (`cards.ts`), board rename (`boards.ts`),
+    member invite/remove (`boardMembers.ts`). Board create is not wired — no socket can
+    be subscribed to a board id that doesn't exist yet, so there is nothing to broadcast.
+  - [x] 12.3 TDD per handler (RED confirmed via a WS `injectWS` socket timing out before
+    the fix, GREEN after): 6 new integration tests asserting a subscribed socket receives
+    `board:sync` after each REST mutation.
+  - [x] 12.4 Found and fixed a real race condition surfaced by 12.2: the REST create
+    handler now sends `board:sync` to the creator's own subscribed socket *before* the
+    HTTP response is returned, so on the creating client the WS message can arrive before
+    the `fetch()` promise resolves. `BoardDetail`'s optimistic `handleCardCreated` appended
+    the card unconditionally, so the same card could be added twice (duplicate React key,
+    duplicate DOM node) when the sync won the race. Root-caused via `systematic-debugging`
+    (confirmed via console instrumentation than the sync fired before the create callback),
+    fixed by extracting `addCardIfAbsent` (`boardState.ts`, TDD, dedupes by card id) and
+    using it in place of the raw append — makes the optimistic update idempotent against
+    an already-applied sync, mirroring how `handleSync`'s full replace is already
+    idempotent.
+  - [x] 12.5 E2E (Playwright, two browser contexts): card created via the real `NewCardForm`
+    UI in context A appears in context B with no reload — the only mutation in this phase
+    with existing frontend UI to drive end-to-end. Board rename, card edit/delete, and
+    member invite/remove are broadcast-tested at the integration level only; their
+    frontend UI doesn't exist yet (Phase 13/14).
+  - [x] 12.6 Full gate: `npm run build && npm run lint && npm run format:check && npm
+    test` (135 tests: 55 server + 66 web + 14 shared) `&& npx playwright test` (4/4,
+    from `e2e/`) — all green.
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
 > plan. The project spans multiple independent subsystems (monorepo scaffold, DB, REST
