@@ -10,12 +10,16 @@ const mockRenameBoard = vi.fn();
 const mockDeleteBoard = vi.fn();
 const mockUpdateCard = vi.fn();
 const mockDeleteCard = vi.fn();
+const mockInviteMember = vi.fn();
+const mockRemoveMember = vi.fn();
 vi.mock("@/lib/boardActions", () => ({
   createCard: (...args: unknown[]) => mockCreateCard(...args),
   renameBoard: (...args: unknown[]) => mockRenameBoard(...args),
   deleteBoard: (...args: unknown[]) => mockDeleteBoard(...args),
   updateCard: (...args: unknown[]) => mockUpdateCard(...args),
   deleteCard: (...args: unknown[]) => mockDeleteCard(...args),
+  inviteMember: (...args: unknown[]) => mockInviteMember(...args),
+  removeMember: (...args: unknown[]) => mockRemoveMember(...args),
 }));
 
 const { capturedHandlers } = vi.hoisted(() => ({
@@ -92,6 +96,7 @@ const board = {
       cards: [],
     },
   ],
+  members: [{ id: "u1", name: "Board Owner", email: "owner@example.com", role: "OWNER" as const }],
 };
 
 describe("BoardDetail", () => {
@@ -103,6 +108,8 @@ describe("BoardDetail", () => {
     mockDeleteBoard.mockReset();
     mockUpdateCard.mockReset();
     mockDeleteCard.mockReset();
+    mockInviteMember.mockReset();
+    mockRemoveMember.mockReset();
     capturedHandlers.onDragEnd = undefined;
   });
 
@@ -473,5 +480,11 @@ describe("BoardDetail", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: /renamed elsewhere/i }),
     ).toBeInTheDocument();
+  });
+
+  it("renders the member list for the board", () => {
+    render(<BoardDetail board={board} currentUserId="u1" />);
+
+    expect(screen.getByTitle("Board Owner")).toBeInTheDocument();
   });
 });

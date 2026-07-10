@@ -22,6 +22,7 @@ import type {
   CardMoveMessage,
 } from "@flowboard/shared";
 
+import { MemberList } from "@/components/MemberList";
 import type { BoardDetail as BoardDetailData } from "@/lib/api";
 import { createCard, deleteBoard, deleteCard, renameBoard, updateCard } from "@/lib/boardActions";
 import {
@@ -521,14 +522,22 @@ export function BoardDetail({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">{name}</h1>
-        {isOwner ? (
-          <>
-            <BoardNameControls boardId={board.id} name={name} onRenamed={setName} />
-            <DeleteBoardControls boardId={board.id} />
-          </>
-        ) : null}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold tracking-tight">{name}</h1>
+          {isOwner ? (
+            <>
+              <BoardNameControls boardId={board.id} name={name} onRenamed={setName} />
+              <DeleteBoardControls boardId={board.id} />
+            </>
+          ) : null}
+        </div>
+        <MemberList
+          boardId={board.id}
+          initialMembers={board.members}
+          currentUserId={currentUserId}
+          isOwner={isOwner}
+        />
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex flex-wrap items-start gap-4">
