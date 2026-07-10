@@ -81,6 +81,23 @@
   - [x] 8.6 Full gate: `npm run build && npm run lint && npm run format:check && npm test
     && npx playwright test` (run from `e2e/`) — all green, confirmed stable across repeated
     runs of the concurrency test
+- [x] Phase 11 — Board membership & sharing (done, commit 3247c7c)
+  - [x] 11.1 Prisma `BoardMember` model (`boardId`, `userId`, `role: OWNER | MEMBER`,
+    `@@unique([boardId, userId])`), migration `20260710030852_add_board_member`
+  - [x] 11.2 `POST /boards/:id/members` — owner invites an existing registered user by
+    email (`404 user_not_found` if no account matches, `409 already_member` on a
+    duplicate invite; no pending-invite system, out of scope)
+  - [x] 11.3 `DELETE /boards/:id/members/:userId` — owner removes a member
+  - [x] 11.4 New `src/lib/boardAccess.ts` (`findAccessibleBoard`) replaces the owner-only
+    `ownerId` check in `GET /boards/:id` and the WS `boardAccessGuard`: access is now
+    owner OR member. Board CRUD (rename/delete) and membership management
+    (invite/remove) stay owner-only (`403 owner_only` for a non-owner member)
+  - [x] 11.5 Integration tests (TDD, written and watched fail first): member can
+    read a board it's been invited to; non-member still gets 404; only the owner can
+    invite/remove members (a member gets 403, including trying to remove themself);
+    inviting an unregistered email or an already-invited member is rejected
+  - [x] 11.6 Full gate: `npm run build && npm run lint && npm run format:check && npm
+    test` — all green (127 tests: 49 server + 64 web + 14 shared)
 
 
 > **For agentic workers:** This is an INDEX/ROADMAP document, not a bite-sized execution
@@ -274,3 +291,67 @@ API. Phase 6 needs both Phase 4 (server WS) and Phase 5 (frontend shell). Phase 
 parallel to Phase 6. Phase 8 needs 4+6+7 done. Phase 9 can start its CDK skeleton (VPC/RDS
 stack shape) anytime after Phase 2, but real deploy waits until Phase 4 works locally.
 Phase 10 is last.
+
+## Amendment — Post-Phase-8 gaps found in review
+
+**Resolved decision:** Boards support inviting other members (not owner-only).
+Real-time sync must reflect true multi-user collaboration, not just multiple
+tabs of the same user.
+
+**Gaps found:** Phase 4's WS broadcast only covers `card:move`. `card:create`,
+`card:update`, `card:delete`, and `board:sync` were defined as message shapes
+in Phase 1 but never wired to the broadcast path. Board/card edit and delete
+UI is missing (verify whether backend routes exist per original Phase 3 scope
+before assuming they need to be built from scratch).
+
+## Phase 11 — Board membership & sharing
+
+- Prisma: `BoardMember` model (boardId, userId, role: OWNER | MEMBER), migration
+- POST /boards/:id/members — invite an existing registered user by email
+  (owner-only action)
+- DELETE /boards/:id/members/:userId — remove a member (owner-only)
+- Update existing ownership middleware: access = owner OR member (not owner-only)
+- Integration tests: member can access/read; non-member is rejected; only
+  owner can invite/remove
+
+**Depends on:** Phase 3. **Unblocks:** Phase 12, 13.
+
+## Phase 12 — Real-time broadcast completion
+
+- Wire REST mutation handlers (card create/update/delete, board create/update,
+  member add/remove) to the same in-memory `boardId → sockets` broadcast used
+  by card:move, emitting the already-defined `card:create`/`card:update`/
+  `card:delete`/`board:sync` events
+- Frontend: apply these incoming events on the board/list pages (currently
+  only card:move is handled)
+- Test: two browser contexts, one creates/edits/deletes a card or invites a
+  member, assert the other reflects it live without refresh
+
+**Depends on:** Phase 4, 11. **Unblocks:** Phase 14.
+
+## Phase 13 — Complete CRUD (board & card edit/delete)
+
+- Audit first: confirm whether backend rename/delete routes for board and
+  card already exist per original Phase 3 scope. If missing, implement with
+  TDD. If present, this phase is frontend-only.
+- Frontend: edit/delete UI for board (rename, delete with confirmation) and
+  card (edit, delete with confirmation), wired to existing/new routes
+- Tests: component tests for the new UI, integration tests for any newly
+  added backend routes
+
+**Depends on:** Phase 11 (ownership check must cover members correctly).
+**Unblocks:** Phase 14.
+
+## Phase 14 — Visual redesign (modern & vibrant)
+
+- Direction: bold colors, gradients, shadows — modern/vibrant, not minimal
+- Branch: `polish/redesign-v2`
+- Full test suite green BEFORE any visual change (baseline)
+- Apply redesign (impeccable if functional, else frontend-design/ui-styling)
+  across: header/nav (must now show logged-in user + logout, currently
+  missing), board list, board detail (columns/cards), member list/invite UI
+- Manual drag-and-drop check after any structural change near cards
+- Full test suite green AFTER — confirm nothing broke
+- finishing-a-development-branch to merge back
+
+**Depends on:** Phase 12, 13.
