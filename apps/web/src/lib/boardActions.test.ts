@@ -5,6 +5,8 @@ import {
   createCard,
   deleteBoard,
   deleteCard,
+  inviteMember,
+  removeMember,
   renameBoard,
   updateCard,
 } from "./boardActions";
@@ -217,6 +219,75 @@ describe("deleteCard", () => {
     expect(result).toEqual({ status: "ok" });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/cards/c1"),
+      expect.objectContaining({ method: "DELETE", credentials: "include" }),
+    );
+  });
+});
+
+describe("inviteMember", () => {
+  it("posts the email and returns the invited member's summary", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(201, {
+        member: {
+          id: "m1",
+          boardId: "b1",
+          userId: "u2",
+          role: "MEMBER",
+          createdAt: "2026-07-10T00:00:00.000Z",
+          name: "Bob",
+          email: "bob@example.com",
+        },
+      }),
+    );
+
+    const result = await inviteMember("b1", "bob@example.com");
+
+    expect(result).toEqual({
+      status: "ok",
+      member: { id: "u2", name: "Bob", email: "bob@example.com", role: "MEMBER" },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/boards/b1/members"),
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ email: "bob@example.com" }),
+      }),
+    );
+  });
+
+  it("returns a clear message when the email doesn't match a registered user", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(404, { error: "user_not_found" }));
+
+    const result = await inviteMember("b1", "nobody@example.com");
+
+    expect(result).toEqual({
+      status: "error",
+      message: "No account found with that email.",
+    });
+  });
+
+  it("returns a clear message when the user is already a member", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(409, { error: "already_member" }));
+
+    const result = await inviteMember("b1", "bob@example.com");
+
+    expect(result).toEqual({
+      status: "error",
+      message: "That person is already a member of this board.",
+    });
+  });
+});
+
+describe("removeMember", () => {
+  it("sends a DELETE request with credentials: include", async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+    const result = await removeMember("b1", "u2");
+
+    expect(result).toEqual({ status: "ok" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/boards/b1/members/u2"),
       expect.objectContaining({ method: "DELETE", credentials: "include" }),
     );
   });

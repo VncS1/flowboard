@@ -1,5 +1,7 @@
 import type { Board, Card } from "@flowboard/shared";
 
+import type { BoardMemberSummary } from "@/lib/api";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 export type CreateBoardResult =
@@ -10,6 +12,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_body: "Please check the information you entered.",
   not_found: "This column no longer exists. Please refresh and try again.",
   owner_only: "Only the board owner can do this.",
+  user_not_found: "No account found with that email.",
+  already_member: "That person is already a member of this board.",
 };
 
 async function messageForResponse(response: Response, fallback: string): Promise<string> {
@@ -147,4 +151,35 @@ export async function updateCard(
 
 export async function deleteCard(cardId: string): Promise<DeleteResult> {
   return deleteRequest(`/cards/${cardId}`, "Could not delete the card. Please try again.");
+}
+
+export type InviteMemberResult =
+  { status: "ok"; member: BoardMemberSummary } | { status: "error"; message: string };
+
+export async function inviteMember(boardId: string, email: string): Promise<InviteMemberResult> {
+  const result = await postJson(
+    `/boards/${boardId}/members`,
+    { email },
+    "Could not invite that member. Please try again.",
+    (body) => {
+      const member = (
+        body as { member: { userId: string; name: string; email: string; role: "MEMBER" } }
+      ).member;
+      const summary: BoardMemberSummary = {
+        id: member.userId,
+        name: member.name,
+        email: member.email,
+        role: member.role,
+      };
+      return summary;
+    },
+  );
+  return result.status === "ok" ? { status: "ok", member: result.value } : result;
+}
+
+export async function removeMember(boardId: string, userId: string): Promise<DeleteResult> {
+  return deleteRequest(
+    `/boards/${boardId}/members/${userId}`,
+    "Could not remove that member. Please try again.",
+  );
 }
