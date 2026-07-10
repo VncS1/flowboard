@@ -6,7 +6,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 export type BoardSummary = Board & { columns: Column[] };
 export type ColumnWithCards = Column & { cards: Card[] };
-export type BoardDetail = Board & { columns: ColumnWithCards[] };
+export type BoardMemberSummary = {
+  id: string;
+  name: string;
+  email: string;
+  role: "OWNER" | "MEMBER";
+};
+export type BoardDetail = Board & { columns: ColumnWithCards[]; members: BoardMemberSummary[] };
 
 export type BoardsResult = { status: "ok"; boards: BoardSummary[] } | { status: "unauthenticated" };
 
