@@ -14,6 +14,7 @@ export function buildApp() {
   app.register(cors, {
     origin: [process.env["CORS_ORIGIN"] ?? "http://localhost:3000"],
     credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE"],
   });
 
   app.get("/health", async () => {
