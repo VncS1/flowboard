@@ -67,6 +67,11 @@ export const cardConflictMessageSchema = z.object({
   card: cardSchema,
 });
 
+export const boardDeletedMessageSchema = z.object({
+  type: z.literal("board:deleted"),
+  boardId: z.string(),
+});
+
 export const clientToServerMessageSchema = z.discriminatedUnion("type", [
   cardMoveMessageSchema,
   cardCreateMessageSchema,
@@ -77,6 +82,7 @@ export const clientToServerMessageSchema = z.discriminatedUnion("type", [
 export const serverToClientMessageSchema = z.discriminatedUnion("type", [
   boardSyncMessageSchema,
   cardConflictMessageSchema,
+  boardDeletedMessageSchema,
 ]);
 
 export type CardMoveMessage = z.infer<typeof cardMoveMessageSchema>;
@@ -85,5 +91,6 @@ export type CardUpdateMessage = z.infer<typeof cardUpdateMessageSchema>;
 export type CardDeleteMessage = z.infer<typeof cardDeleteMessageSchema>;
 export type BoardSyncMessage = z.infer<typeof boardSyncMessageSchema>;
 export type CardConflictMessage = z.infer<typeof cardConflictMessageSchema>;
+export type BoardDeletedMessage = z.infer<typeof boardDeletedMessageSchema>;
 export type ClientToServerMessage = z.infer<typeof clientToServerMessageSchema>;
 export type ServerToClientMessage = z.infer<typeof serverToClientMessageSchema>;

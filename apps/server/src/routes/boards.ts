@@ -2,8 +2,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { prisma } from "../db/client.js";
-import { findAccessibleBoard } from "../lib/boardAccess.js";
-import { broadcastBoardSync } from "../realtime/broadcast.js";
+import { accessibleBoardsWhere, findAccessibleBoard } from "../lib/boardAccess.js";
+import { broadcast, broadcastBoardSync } from "../realtime/broadcast.js";
 
 const createBoardSchema = z.object({
   name: z.string().min(1),
@@ -50,7 +50,7 @@ export async function boardRoutes(app: FastifyInstance) {
     { preHandler: app.authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const boards = await prisma.board.findMany({
-        where: { ownerId: userIdFrom(request) },
+        where: accessibleBoardsWhere(userIdFrom(request)),
         include: { columns: { orderBy: { position: "asc" } } },
       });
 
@@ -146,6 +146,8 @@ export async function boardRoutes(app: FastifyInstance) {
       }
 
       await prisma.board.delete({ where: { id: existing.id } });
+
+      broadcast(existing.id, { type: "board:deleted", boardId: existing.id });
 
       return reply.code(204).send();
     },

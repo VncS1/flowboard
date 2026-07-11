@@ -72,7 +72,7 @@ async function createBoard(app: ReturnType<typeof buildApp>, token: string, name
 }
 
 describe("GET /boards", () => {
-  it("lists only boards owned by the authenticated user", async () => {
+  it("does not list boards owned by other users", async () => {
     const app = buildApp();
     const owner = await signup(app, "lister@example.com");
     const other = await signup(app, "other@example.com");
@@ -89,6 +89,33 @@ describe("GET /boards", () => {
     const body = response.json();
     expect(body.boards).toHaveLength(1);
     expect(body.boards[0]).toMatchObject({ name: "Owner Board" });
+
+    await app.close();
+  });
+
+  it("lists boards the authenticated user was invited to as a member, not just owned ones", async () => {
+    const app = buildApp();
+    const owner = await signup(app, "list-owner@example.com");
+    const member = await signup(app, "list-member@example.com");
+    const board = await createBoard(app, owner.token, "Shared Board");
+
+    await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/members`,
+      cookies: { token: owner.token },
+      payload: { email: "list-member@example.com" },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/boards",
+      cookies: { token: member.token },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.boards).toHaveLength(1);
+    expect(body.boards[0]).toMatchObject({ name: "Shared Board" });
 
     await app.close();
   });
@@ -333,6 +360,38 @@ describe("DELETE /boards/:id", () => {
 
     expect(response.statusCode).toBe(404);
 
+    await app.close();
+  });
+
+  it("broadcasts board:deleted to subscribed sockets when the board is deleted", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "deletebroadcast-owner@example.com");
+    const member = await signup(app, "deletebroadcast-member@example.com");
+    const board = await createBoard(app, owner.token, "Shared Doomed Board");
+
+    await app.inject({
+      method: "POST",
+      url: `/boards/${board.id}/members`,
+      cookies: { token: owner.token },
+      payload: { email: "deletebroadcast-member@example.com" },
+    });
+
+    const socket = await app.injectWS(`/ws/boards/${board.id}`, {
+      headers: { cookie: `token=${member.token}` },
+    });
+
+    const deleted = nextMessage(socket);
+    await app.inject({
+      method: "DELETE",
+      url: `/boards/${board.id}`,
+      cookies: { token: owner.token },
+    });
+
+    const message = await deleted;
+    expect(message).toEqual({ type: "board:deleted", boardId: board.id });
+
+    socket.terminate();
     await app.close();
   });
 });

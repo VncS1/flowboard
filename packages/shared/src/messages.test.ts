@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  boardDeletedMessageSchema,
   boardSyncMessageSchema,
   cardConflictMessageSchema,
   cardCreateMessageSchema,
@@ -197,5 +198,25 @@ describe("cardConflictMessageSchema", () => {
     };
 
     expect(() => cardConflictMessageSchema.parse(message)).toThrow();
+  });
+});
+
+describe("boardDeletedMessageSchema", () => {
+  it("parses a valid board:deleted message", () => {
+    const message = { type: "board:deleted", boardId: "board-1" };
+
+    expect(boardDeletedMessageSchema.parse(message)).toEqual(message);
+  });
+
+  it("rejects a message missing boardId", () => {
+    const message = { type: "board:deleted" };
+
+    expect(() => boardDeletedMessageSchema.parse(message)).toThrow();
+  });
+
+  it("rejects the wrong discriminant type", () => {
+    const message = { type: "board:sync", boardId: "board-1" };
+
+    expect(() => boardDeletedMessageSchema.parse(message)).toThrow();
   });
 });

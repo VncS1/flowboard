@@ -13,7 +13,9 @@ describe("useBoardSocket", () => {
   it("connects to NEXT_PUBLIC_WS_URL for the given board", () => {
     vi.stubEnv("NEXT_PUBLIC_WS_URL", "ws://example.test");
 
-    renderHook(() => useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn() }));
+    renderHook(() =>
+      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn(), onBoardDeleted: vi.fn() }),
+    );
 
     expect(FakeWebSocket.latest().url).toBe("ws://example.test/ws/boards/board-1");
   });
@@ -21,14 +23,18 @@ describe("useBoardSocket", () => {
   it("falls back to a local default when NEXT_PUBLIC_WS_URL is unset", () => {
     vi.stubEnv("NEXT_PUBLIC_WS_URL", "");
 
-    renderHook(() => useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn() }));
+    renderHook(() =>
+      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn(), onBoardDeleted: vi.fn() }),
+    );
 
     expect(FakeWebSocket.latest().url).toBe("ws://localhost:4000/ws/boards/board-1");
   });
 
   it("parses a valid board:sync message and forwards it to onSync", () => {
     const onSync = vi.fn();
-    renderHook(() => useBoardSocket("board-1", { onSync, onConflict: vi.fn() }));
+    renderHook(() =>
+      useBoardSocket("board-1", { onSync, onConflict: vi.fn(), onBoardDeleted: vi.fn() }),
+    );
 
     const message = {
       type: "board:sync",
@@ -44,7 +50,9 @@ describe("useBoardSocket", () => {
 
   it("parses a valid card:conflict message and forwards it to onConflict", () => {
     const onConflict = vi.fn();
-    renderHook(() => useBoardSocket("board-1", { onSync: vi.fn(), onConflict }));
+    renderHook(() =>
+      useBoardSocket("board-1", { onSync: vi.fn(), onConflict, onBoardDeleted: vi.fn() }),
+    );
 
     const message = {
       type: "card:conflict",
@@ -65,12 +73,25 @@ describe("useBoardSocket", () => {
     expect(onConflict).toHaveBeenCalledWith(message);
   });
 
+  it("parses a valid board:deleted message and forwards it to onBoardDeleted", () => {
+    const onBoardDeleted = vi.fn();
+    renderHook(() =>
+      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn(), onBoardDeleted }),
+    );
+
+    const message = { type: "board:deleted", boardId: "board-1" };
+
+    act(() => FakeWebSocket.latest().emitMessage(message));
+
+    expect(onBoardDeleted).toHaveBeenCalledWith(message);
+  });
+
   it("rejects a message that fails schema validation without calling either handler", () => {
     const onSync = vi.fn();
     const onConflict = vi.fn();
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    renderHook(() => useBoardSocket("board-1", { onSync, onConflict }));
+    renderHook(() => useBoardSocket("board-1", { onSync, onConflict, onBoardDeleted: vi.fn() }));
 
     act(() => FakeWebSocket.latest().emitMessage({ type: "not-a-real-message" }));
 
@@ -86,7 +107,7 @@ describe("useBoardSocket", () => {
     const onConflict = vi.fn();
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    renderHook(() => useBoardSocket("board-1", { onSync, onConflict }));
+    renderHook(() => useBoardSocket("board-1", { onSync, onConflict, onBoardDeleted: vi.fn() }));
 
     expect(() => act(() => FakeWebSocket.latest().emitRaw("{not json"))).not.toThrow();
 
@@ -99,7 +120,7 @@ describe("useBoardSocket", () => {
 
   it("sends a card:move message over the socket as JSON once the connection is open", () => {
     const { result } = renderHook(() =>
-      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn() }),
+      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn(), onBoardDeleted: vi.fn() }),
     );
     act(() => FakeWebSocket.latest().emitOpen());
 
@@ -124,7 +145,7 @@ describe("useBoardSocket", () => {
 
   it("queues a send made before the connection opens and flushes it once open", () => {
     const { result } = renderHook(() =>
-      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn() }),
+      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn(), onBoardDeleted: vi.fn() }),
     );
 
     act(() => {
@@ -152,7 +173,7 @@ describe("useBoardSocket", () => {
 
   it("closes the socket on unmount", () => {
     const { unmount } = renderHook(() =>
-      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn() }),
+      useBoardSocket("board-1", { onSync: vi.fn(), onConflict: vi.fn(), onBoardDeleted: vi.fn() }),
     );
 
     unmount();

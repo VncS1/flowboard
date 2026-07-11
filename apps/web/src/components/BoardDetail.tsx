@@ -496,7 +496,15 @@ export function BoardDetail({
     [router],
   );
 
-  const socket = useBoardSocket(board.id, { onSync: handleSync, onConflict: handleConflict });
+  const handleBoardDeleted = useCallback(() => {
+    router.push("/boards");
+  }, [router]);
+
+  const socket = useBoardSocket(board.id, {
+    onSync: handleSync,
+    onConflict: handleConflict,
+    onBoardDeleted: handleBoardDeleted,
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),

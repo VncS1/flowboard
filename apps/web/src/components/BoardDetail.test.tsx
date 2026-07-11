@@ -398,6 +398,18 @@ describe("BoardDetail", () => {
     });
   });
 
+  describe("board:deleted from another client", () => {
+    it("redirects a connected member to the board list when the board is deleted live", () => {
+      render(<BoardDetail board={board} currentUserId="u2" />);
+
+      act(() => {
+        FakeWebSocket.latest().emitMessage({ type: "board:deleted", boardId: "1" });
+      });
+
+      expect(mockPush).toHaveBeenCalledWith("/boards");
+    });
+  });
+
   describe("card edit", () => {
     it("edits a card's title on submit and reflects it immediately", async () => {
       mockUpdateCard.mockResolvedValue({

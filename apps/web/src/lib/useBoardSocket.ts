@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 import {
   serverToClientMessageSchema,
+  type BoardDeletedMessage,
   type BoardSyncMessage,
   type CardConflictMessage,
   type ClientToServerMessage,
@@ -10,6 +11,7 @@ import {
 export type BoardSocketHandlers = {
   onSync: (message: BoardSyncMessage) => void;
   onConflict: (message: CardConflictMessage) => void;
+  onBoardDeleted: (message: BoardDeletedMessage) => void;
 };
 
 export type BoardSocket = {
@@ -60,6 +62,8 @@ export function useBoardSocket(boardId: string, handlers: BoardSocketHandlers): 
 
       if (parsed.data.type === "board:sync") {
         handlersRef.current.onSync(parsed.data);
+      } else if (parsed.data.type === "board:deleted") {
+        handlersRef.current.onBoardDeleted(parsed.data);
       } else {
         handlersRef.current.onConflict(parsed.data);
       }
