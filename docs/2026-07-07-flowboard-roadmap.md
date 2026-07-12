@@ -255,13 +255,23 @@ Open Decision #2 (frontend hosting).
    issues a JWT on login (bcrypt-hashed passwords in Postgres), REST routes verify it via
    middleware, and the WebSocket handshake verifies the same JWT on `connect`. Confirm or
    override before Phase 3's detailed plan is written.
-2. **Frontend hosting** (needed before Phase 9): CLAUDE.md's CDK section only describes
-   provisioning EC2/Elastic Beanstalk + RDS for the backend. Default assumption: deploy
-   `apps/web` to Vercel (simplest for a Next.js portfolio project) and keep CDK scoped to
-   backend + DB, OR fold a static/SSR frontend into the same EC2 box if you want
-   everything on AWS for the portfolio story. Confirm before Phase 9.
+2. **Frontend hosting** (needed before Phase 9): RESOLVED 2026-07-12 — `apps/web` deploys
+   to Vercel.
 3. **Drag-and-drop library** (needed before Phase 6): not specified in CLAUDE.md. Default
    assumption: `@dnd-kit`. Swap if you have a preference.
+4. **Backend/DB hosting** (needed before Phase 9): RESOLVED 2026-07-12 — CLAUDE.md's
+   original plan was AWS (EC2/Elastic Beanstalk + RDS via CDK), but the user started a
+   new job 2026-07-13 where they'll get hands-on AWS experience on the job, and preferred
+   not to put a credit card on a personal AWS account in the meantime (AWS Free Tier
+   still requires a card on file). Decision: ship the live deploy now on free tiers that
+   require no card — backend on **Render** (Node web service), database on **Neon**
+   (serverless Postgres, no expiry, unlike Render's free Postgres which expires after 30
+   days). AWS/CDK infra (the original Phase 9 scope) is deferred, not cancelled — revisit
+   once the user has AWS access/comfort through the new job or a free certification
+   course (e.g. AWS via IBM/Skill Builder). Trade-off accepted: the portfolio's live demo
+   temporarily doesn't demonstrate the AWS deployment story CLAUDE.md calls out, but
+   Render/Neon still prove real production deployment of the WebSocket + optimistic-
+   concurrency architecture.
 
 ---
 
@@ -366,13 +376,27 @@ This is the part CLAUDE.md calls out as the main technical challenge — plan it
 
 **Depends on:** Phase 4, 6, 7. **Unblocks:** Phase 10 (final verification).
 
-## Phase 9 — AWS infra (CDK) & deployment
+## Phase 9 — Deployment
+
+> **Amendment 2026-07-12:** per Open Decision #4, the original AWS/CDK scope below is
+> deferred (not cancelled). Executing now instead: **apps/web → Vercel**, **apps/server →
+> Render**, **Postgres → Neon**, none requiring a card on file. `infra/` stays an empty
+> scaffold until the AWS pass happens later.
+
+- [ ] 9.1 Neon: create project/database, run `prisma migrate deploy` against it
+- [ ] 9.2 Render: web service for `apps/server` (build: `npm run build`, start via `tsx`
+  or compiled JS), env vars `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`
+- [ ] 9.3 Vercel: deploy `apps/web`, env vars `JWT_SECRET` (must match Render's),
+  `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL` pointing at the Render backend
+- [ ] 9.4 Smoke test the deployed stack: signup → create board → create card → move card,
+  confirm real-time sync works cross-origin (Vercel ↔ Render)
+
+### Deferred — original AWS/CDK scope (revisit post new-job AWS exposure)
 
 - `infra/bin` CDK entrypoint, `infra/lib`: VPC + security groups stack
 - RDS Postgres stack (Free Tier sizing)
 - EC2/Elastic Beanstalk stack for `apps/server`
 - Secrets/env wiring (SSM Parameter Store or Secrets Manager) — never hardcode AWS creds
-- Resolve Open Decision #2 (frontend hosting) before writing this phase's detailed plan
 - `cdk synth` verification, then `cdk deploy`
 - Smoke test against the deployed stack
 
