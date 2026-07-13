@@ -2,7 +2,7 @@ import type { Board, Card } from "@flowboard/shared";
 
 import type { BoardMemberSummary } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE = "/api";
 
 export type CreateBoardResult =
   { status: "ok"; board: Board } | { status: "error"; message: string };
@@ -33,7 +33,7 @@ async function postJson<T>(
 ): Promise<{ status: "ok"; value: T } | { status: "error"; message: string }> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -58,7 +58,7 @@ async function patchJson<T>(
 ): Promise<{ status: "ok"; value: T } | { status: "error"; message: string }> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${API_BASE}${path}`, {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -81,7 +81,7 @@ async function deleteRequest(
 ): Promise<{ status: "ok" } | { status: "error"; message: string }> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, { method: "DELETE", credentials: "include" });
+    response = await fetch(`${API_BASE}${path}`, { method: "DELETE", credentials: "include" });
   } catch {
     return { status: "error", message: "Could not reach the server. Please try again." };
   }

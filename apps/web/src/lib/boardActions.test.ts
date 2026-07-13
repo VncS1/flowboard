@@ -38,7 +38,7 @@ describe("createBoard", () => {
 
     expect(result).toEqual({ status: "ok", board });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/boards"),
+      "/api/boards",
       expect.objectContaining({
         method: "POST",
         credentials: "include",
@@ -86,7 +86,7 @@ describe("createCard", () => {
 
     expect(result).toEqual({ status: "ok", card });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/boards/b1/columns/col1/cards"),
+      "/api/boards/b1/columns/col1/cards",
       expect.objectContaining({
         method: "POST",
         credentials: "include",
@@ -127,7 +127,7 @@ describe("renameBoard", () => {
 
     expect(result).toEqual({ status: "ok", board });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/boards/b1"),
+      "/api/boards/b1",
       expect.objectContaining({
         method: "PATCH",
         credentials: "include",
@@ -156,7 +156,7 @@ describe("deleteBoard", () => {
 
     expect(result).toEqual({ status: "ok" });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/boards/b1"),
+      "/api/boards/b1",
       expect.objectContaining({ method: "DELETE", credentials: "include" }),
     );
   });
@@ -189,7 +189,7 @@ describe("updateCard", () => {
 
     expect(result).toEqual({ status: "ok", card });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/cards/c1"),
+      "/api/cards/c1",
       expect.objectContaining({
         method: "PATCH",
         credentials: "include",
@@ -218,7 +218,7 @@ describe("deleteCard", () => {
 
     expect(result).toEqual({ status: "ok" });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/cards/c1"),
+      "/api/cards/c1",
       expect.objectContaining({ method: "DELETE", credentials: "include" }),
     );
   });
@@ -247,7 +247,7 @@ describe("inviteMember", () => {
       member: { id: "u2", name: "Bob", email: "bob@example.com", role: "MEMBER" },
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/boards/b1/members"),
+      "/api/boards/b1/members",
       expect.objectContaining({
         method: "POST",
         credentials: "include",
@@ -287,7 +287,7 @@ describe("removeMember", () => {
 
     expect(result).toEqual({ status: "ok" });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/boards/b1/members/u2"),
+      "/api/boards/b1/members/u2",
       expect.objectContaining({ method: "DELETE", credentials: "include" }),
     );
   });
