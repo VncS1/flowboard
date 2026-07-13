@@ -1,38 +1,54 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { BoardsList } from "@/components/BoardsList";
 import { CreateBoardForm } from "@/components/CreateBoardForm";
 import { Header } from "@/components/Header";
-import { getBoards, getCurrentUser } from "@/lib/api";
+import { getBoards, getCurrentUser, type BoardsResult, type CurrentUserResult } from "@/lib/api";
 
-export default async function BoardsPage() {
-  const result = await getBoards();
+export default function BoardsPage() {
+  const router = useRouter();
+  const [boardsResult, setBoardsResult] = useState<BoardsResult | null>(null);
+  const [userResult, setUserResult] = useState<CurrentUserResult | null>(null);
 
-  if (result.status === "unauthenticated") {
-    return (
-      <main className="mx-auto max-w-2xl px-6 py-16">
-        <p className="text-muted text-sm">
-          You need to{" "}
-          <Link href="/login" className="text-primary hover:underline">
-            sign in
-          </Link>{" "}
-          to see your boards.
-        </p>
-      </main>
-    );
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const boards = await getBoards();
+      if (cancelled) return;
+
+      if (boards.status === "unauthenticated") {
+        router.replace("/login");
+        return;
+      }
+
+      setBoardsResult(boards);
+      setUserResult(await getCurrentUser());
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  if (!boardsResult || boardsResult.status !== "ok") {
+    return null;
   }
-
-  const userResult = await getCurrentUser();
 
   return (
     <>
-      {userResult.status === "ok" ? <Header user={userResult.user} /> : null}
+      {userResult?.status === "ok" ? <Header user={userResult.user} /> : null}
       <main className="mx-auto max-w-2xl px-6 py-16">
         <h1 className="mb-8 text-xl font-semibold tracking-tight">Boards</h1>
         <div className="mb-8">
           <CreateBoardForm />
         </div>
-        <BoardsList boards={result.boards} />
+        <BoardsList boards={boardsResult.boards} />
       </main>
     </>
   );

@@ -22,7 +22,7 @@ describe("POST /auth/signup", () => {
     const tokenCookie = cookies.find((cookie) => cookie.name === "token");
     expect(tokenCookie).toBeDefined();
     expect(tokenCookie?.httpOnly).toBe(true);
-    expect(tokenCookie?.sameSite).toBe("Lax");
+    expect(tokenCookie?.sameSite).toBe("None");
 
     const stored = await prisma.user.findUnique({ where: { email: "alice@example.com" } });
     expect(stored).not.toBeNull();

@@ -1,5 +1,3 @@
-import { cookies } from "next/headers";
-
 import type { Board, Card, Column } from "@flowboard/shared";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -23,15 +21,9 @@ export type CurrentUser = { id: string; email: string; name: string };
 
 export type CurrentUserResult = { status: "ok"; user: CurrentUser } | { status: "unauthenticated" };
 
-async function authHeaders(): Promise<Record<string, string>> {
-  const store = await cookies();
-  const token = store.get("token")?.value;
-  return token ? { cookie: `token=${token}` } : {};
-}
-
 export async function getBoards(): Promise<BoardsResult> {
   const response = await fetch(`${API_URL}/boards`, {
-    headers: await authHeaders(),
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -48,7 +40,7 @@ export async function getBoards(): Promise<BoardsResult> {
 
 export async function getBoard(id: string): Promise<BoardResult> {
   const response = await fetch(`${API_URL}/boards/${id}`, {
-    headers: await authHeaders(),
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -68,7 +60,7 @@ export async function getBoard(id: string): Promise<BoardResult> {
 
 export async function getCurrentUser(): Promise<CurrentUserResult> {
   const response = await fetch(`${API_URL}/auth/me`, {
-    headers: await authHeaders(),
+    credentials: "include",
     cache: "no-store",
   });
 

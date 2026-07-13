@@ -42,7 +42,7 @@ export async function authRoutes(app: FastifyInstance) {
     reply.setCookie("token", token, {
       httpOnly: true,
       secure: true,
-      sameSite: "lax",
+      sameSite: "none",
       path: "/",
     });
 
@@ -71,7 +71,7 @@ export async function authRoutes(app: FastifyInstance) {
     reply.setCookie("token", token, {
       httpOnly: true,
       secure: true,
-      sameSite: "lax",
+      sameSite: "none",
       path: "/",
     });
 
