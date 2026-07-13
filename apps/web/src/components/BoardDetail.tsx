@@ -158,7 +158,7 @@ function CardItem({
         />
       ) : (
         <div className="flex items-start justify-between gap-2">
-          <span {...attributes} {...listeners} className="flex-1 cursor-grab">
+          <span {...attributes} {...listeners} className="touch-none flex-1 cursor-grab">
             {card.title}
           </span>
           <div

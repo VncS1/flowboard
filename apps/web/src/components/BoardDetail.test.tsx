@@ -141,6 +141,13 @@ describe("BoardDetail", () => {
     expect(within(todoColumn).getByText("Ship feature")).toBeInTheDocument();
   });
 
+  it("marks the card drag handle touch-action: none so touch drag isn't stolen by page scroll", () => {
+    render(<BoardDetail board={board} />);
+
+    const handle = screen.getByText("Write tests").closest("span")!;
+    expect(handle).toHaveClass("touch-none");
+  });
+
   it("shows an empty state for a column with no cards", () => {
     render(<BoardDetail board={board} />);
 
