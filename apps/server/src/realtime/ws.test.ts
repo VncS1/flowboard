@@ -14,6 +14,15 @@ async function signup(app: ReturnType<typeof buildApp>, email: string) {
   return { token, userId: response.json().user.id as string };
 }
 
+async function wsTicket(app: ReturnType<typeof buildApp>, token: string) {
+  const response = await app.inject({
+    method: "GET",
+    url: "/auth/ws-ticket",
+    cookies: { token },
+  });
+  return response.json().ticket as string;
+}
+
 async function createBoard(app: ReturnType<typeof buildApp>, token: string, name: string) {
   const response = await app.inject({
     method: "POST",
@@ -73,6 +82,47 @@ describe("WS /ws/boards/:boardId handshake", () => {
     await expect(
       app.injectWS(`/ws/boards/${board.id}`, { headers: { cookie: `token=${stranger.token}` } }),
     ).rejects.toThrow(/404/);
+
+    await app.close();
+  });
+
+  it("accepts the upgrade using a valid ws ticket in place of a cookie", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "wsticket1@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const ticket = await wsTicket(app, owner.token);
+
+    const socket = await app.injectWS(`/ws/boards/${board.id}?ticket=${ticket}`);
+    expect(socket.readyState).toBe(socket.OPEN);
+
+    socket.terminate();
+    await app.close();
+  });
+
+  it("rejects the upgrade when the ticket is invalid", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "wsticket2@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+
+    await expect(app.injectWS(`/ws/boards/${board.id}?ticket=not-a-real-ticket`)).rejects.toThrow(
+      /401/,
+    );
+
+    await app.close();
+  });
+
+  it("rejects the upgrade when the ticket lacks the ws scope", async () => {
+    const app = buildApp();
+    await app.ready();
+    const owner = await signup(app, "wsticket3@example.com");
+    const board = await createBoard(app, owner.token, "Board");
+    const sessionToken = owner.token;
+
+    await expect(app.injectWS(`/ws/boards/${board.id}?ticket=${sessionToken}`)).rejects.toThrow(
+      /401/,
+    );
 
     await app.close();
   });

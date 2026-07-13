@@ -5,6 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FakeWebSocket } from "@/lib/testUtils/fakeWebSocket";
 
+function ticketResponse(): Response {
+  return new Response(JSON.stringify({ ticket: "test-ticket" }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 const mockCreateCard = vi.fn();
 const mockRenameBoard = vi.fn();
 const mockDeleteBoard = vi.fn();
@@ -59,6 +66,12 @@ vi.mock("next/navigation", () => ({
 
 import { BoardDetail } from "./BoardDetail";
 
+async function renderBoard(props: Parameters<typeof BoardDetail>[0]) {
+  const utils = render(<BoardDetail {...props} />);
+  await act(async () => {});
+  return utils;
+}
+
 const board = {
   id: "1",
   name: "Sprint Board",
@@ -101,6 +114,7 @@ const board = {
 
 describe("BoardDetail", () => {
   beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(ticketResponse()));
     mockRefresh.mockClear();
     mockPush.mockClear();
     mockCreateCard.mockReset();
@@ -134,8 +148,8 @@ describe("BoardDetail", () => {
     expect(within(doneColumn).getByText(/no cards/i)).toBeInTheDocument();
   });
 
-  it("optimistically moves a card to the target column immediately and emits card:move", () => {
-    render(<BoardDetail board={board} />);
+  it("optimistically moves a card to the target column immediately and emits card:move", async () => {
+    await renderBoard({ board });
     act(() => FakeWebSocket.latest().emitOpen());
 
     act(() => {
@@ -159,8 +173,8 @@ describe("BoardDetail", () => {
     });
   });
 
-  it("sends the incremented version for a second move of the same card in the same tab, with no server round trip in between", () => {
-    render(<BoardDetail board={board} />);
+  it("sends the incremented version for a second move of the same card in the same tab, with no server round trip in between", async () => {
+    await renderBoard({ board });
     act(() => FakeWebSocket.latest().emitOpen());
 
     act(() => {
@@ -180,8 +194,8 @@ describe("BoardDetail", () => {
     });
   });
 
-  it("rolls back the optimistic move and refetches when the server reports a conflict", () => {
-    render(<BoardDetail board={board} />);
+  it("rolls back the optimistic move and refetches when the server reports a conflict", async () => {
+    await renderBoard({ board });
 
     act(() => {
       capturedHandlers.onDragEnd?.({ active: { id: "card1" }, over: { id: "c2" } });
@@ -219,8 +233,8 @@ describe("BoardDetail", () => {
     expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 
-  it("applies a board:sync event from another client live, without a refresh", () => {
-    render(<BoardDetail board={board} />);
+  it("applies a board:sync event from another client live, without a refresh", async () => {
+    await renderBoard({ board });
 
     act(() => {
       FakeWebSocket.latest().emitMessage({
@@ -256,9 +270,9 @@ describe("BoardDetail", () => {
     expect(mockRefresh).not.toHaveBeenCalled();
   });
 
-  it("rejects an inbound message that fails schema validation without applying it", () => {
+  it("rejects an inbound message that fails schema validation without applying it", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    render(<BoardDetail board={board} />);
+    await renderBoard({ board });
 
     act(() => {
       FakeWebSocket.latest().emitMessage({ type: "card:move", cardId: "card1" });
@@ -399,8 +413,8 @@ describe("BoardDetail", () => {
   });
 
   describe("board:deleted from another client", () => {
-    it("redirects a connected member to the board list when the board is deleted live", () => {
-      render(<BoardDetail board={board} currentUserId="u2" />);
+    it("redirects a connected member to the board list when the board is deleted live", async () => {
+      await renderBoard({ board, currentUserId: "u2" });
 
       act(() => {
         FakeWebSocket.latest().emitMessage({ type: "board:deleted", boardId: "1" });
@@ -474,8 +488,8 @@ describe("BoardDetail", () => {
     });
   });
 
-  it("applies a board rename from another client's board:sync event live", () => {
-    render(<BoardDetail board={board} currentUserId="u1" />);
+  it("applies a board rename from another client's board:sync event live", async () => {
+    await renderBoard({ board, currentUserId: "u1" });
 
     act(() => {
       FakeWebSocket.latest().emitMessage({

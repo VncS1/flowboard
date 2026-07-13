@@ -25,7 +25,7 @@ describe("getBoards", () => {
     const result = await getBoards();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/boards"),
+      "/api/boards",
       expect.objectContaining({ credentials: "include" }),
     );
     expect(result).toEqual({
@@ -81,7 +81,7 @@ describe("getBoard", () => {
     const result = await getBoard("1");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/boards/1"),
+      "/api/boards/1",
       expect.objectContaining({ credentials: "include" }),
     );
     expect(result).toEqual({ status: "ok", board });
@@ -112,7 +112,7 @@ describe("getCurrentUser", () => {
     const result = await getCurrentUser();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/auth/me"),
+      "/api/auth/me",
       expect.objectContaining({ credentials: "include" }),
     );
     expect(result).toEqual({ status: "ok", user });

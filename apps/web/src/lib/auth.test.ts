@@ -30,7 +30,7 @@ describe("login", () => {
 
     expect(result).toEqual({ status: "ok" });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/auth/login"),
+      "/api/auth/login",
       expect.objectContaining({
         method: "POST",
         credentials: "include",
@@ -69,7 +69,7 @@ describe("signup", () => {
 
     expect(result).toEqual({ status: "ok" });
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/auth/signup"),
+      "/api/auth/signup",
       expect.objectContaining({
         method: "POST",
         credentials: "include",
@@ -108,7 +108,7 @@ describe("logout", () => {
     await logout();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/auth/logout"),
+      "/api/auth/logout",
       expect.objectContaining({ method: "POST", credentials: "include" }),
     );
   });

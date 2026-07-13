@@ -11,6 +11,27 @@ function userIdFrom(request: FastifyRequest): string {
   return (request.user as { sub: string }).sub;
 }
 
+async function wsAuthenticate(
+  app: FastifyInstance,
+  request: FastifyRequest<{ Querystring: { ticket?: string } }>,
+  reply: FastifyReply,
+) {
+  const { ticket } = request.query;
+  if (!ticket) {
+    return app.authenticate(request, reply);
+  }
+
+  try {
+    const payload = app.jwt.verify<{ sub: string; scope?: string }>(ticket);
+    if (payload.scope !== "ws") {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+    request.user = payload;
+  } catch {
+    return reply.code(401).send({ error: "unauthorized" });
+  }
+}
+
 async function boardAccessGuard(
   request: FastifyRequest<{ Params: { boardId: string } }>,
   reply: FastifyReply,
@@ -24,9 +45,12 @@ async function boardAccessGuard(
 export const realtimeRoutes = fp(async (app: FastifyInstance) => {
   await app.register(websocketPlugin);
 
-  app.get<{ Params: { boardId: string } }>(
+  app.get<{ Params: { boardId: string }; Querystring: { ticket?: string } }>(
     "/ws/boards/:boardId",
-    { websocket: true, preHandler: [app.authenticate, boardAccessGuard] },
+    {
+      websocket: true,
+      preHandler: [(request, reply) => wsAuthenticate(app, request, reply), boardAccessGuard],
+    },
     (socket, request) => {
       const { boardId } = request.params;
       subscribe(boardId, socket);

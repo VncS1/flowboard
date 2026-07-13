@@ -88,6 +88,12 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(200).send({ user: toPublicUser(user) });
   });
 
+  app.get("/auth/ws-ticket", { preHandler: app.authenticate }, async (request, reply) => {
+    const { sub } = request.user as { sub: string };
+    const ticket = await reply.jwtSign({ sub, scope: "ws" }, { expiresIn: "30s" });
+    return reply.code(200).send({ ticket });
+  });
+
   app.post("/auth/logout", async (_request, reply) => {
     reply.clearCookie("token", { path: "/" });
     return reply.code(200).send({ ok: true });

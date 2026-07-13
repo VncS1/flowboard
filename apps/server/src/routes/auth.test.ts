@@ -156,6 +156,45 @@ describe("GET /auth/me", () => {
   });
 });
 
+describe("GET /auth/ws-ticket", () => {
+  it("returns a short-lived ws-scoped ticket for a signed-in user", async () => {
+    const app = buildApp();
+    const signup = await app.inject({
+      method: "POST",
+      url: "/auth/signup",
+      payload: { email: "gina@example.com", name: "Gina", password: "correct-horse" },
+    });
+    const tokenCookie = signup.cookies.find((cookie) => cookie.name === "token");
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/auth/ws-ticket",
+      cookies: { token: tokenCookie!.value },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(typeof body.ticket).toBe("string");
+
+    const payload = app.jwt.decode(body.ticket) as { sub: string; scope: string; exp: number };
+    expect(payload.sub).toBe(signup.json().user.id);
+    expect(payload.scope).toBe("ws");
+    expect(payload.exp).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 30);
+
+    await app.close();
+  });
+
+  it("rejects an unauthenticated request with 401", async () => {
+    const app = buildApp();
+
+    const response = await app.inject({ method: "GET", url: "/auth/ws-ticket" });
+
+    expect(response.statusCode).toBe(401);
+
+    await app.close();
+  });
+});
+
 describe("POST /auth/logout", () => {
   it("clears the auth cookie", async () => {
     const app = buildApp();

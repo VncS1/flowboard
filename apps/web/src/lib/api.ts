@@ -1,6 +1,6 @@
 import type { Board, Card, Column } from "@flowboard/shared";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE = "/api";
 
 export type BoardSummary = Board & { columns: Column[] };
 export type ColumnWithCards = Column & { cards: Card[] };
@@ -22,7 +22,7 @@ export type CurrentUser = { id: string; email: string; name: string };
 export type CurrentUserResult = { status: "ok"; user: CurrentUser } | { status: "unauthenticated" };
 
 export async function getBoards(): Promise<BoardsResult> {
-  const response = await fetch(`${API_URL}/boards`, {
+  const response = await fetch(`${API_BASE}/boards`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -39,7 +39,7 @@ export async function getBoards(): Promise<BoardsResult> {
 }
 
 export async function getBoard(id: string): Promise<BoardResult> {
-  const response = await fetch(`${API_URL}/boards/${id}`, {
+  const response = await fetch(`${API_BASE}/boards/${id}`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -59,7 +59,7 @@ export async function getBoard(id: string): Promise<BoardResult> {
 }
 
 export async function getCurrentUser(): Promise<CurrentUserResult> {
-  const response = await fetch(`${API_URL}/auth/me`, {
+  const response = await fetch(`${API_BASE}/auth/me`, {
     credentials: "include",
     cache: "no-store",
   });

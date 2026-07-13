@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE = "/api";
 
 export type AuthResult = { status: "ok" } | { status: "error"; message: string };
 
@@ -24,7 +24,7 @@ async function postJson(
 ): Promise<AuthResult> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -54,5 +54,5 @@ export async function signup(email: string, name: string, password: string): Pro
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+  await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
 }
